@@ -179,13 +179,26 @@ get_component_info() {
     jq -r ".components.${component_type}[] | select(.id == \"${component_id}\")" "$TEMP_DIR/registry.json"
 }
 
+# Helper function to get the correct registry key for a component type
+get_registry_key() {
+    local type=$1
+    # Most types are pluralized, but 'config' stays singular
+    case "$type" in
+        config) echo "config" ;;
+        *) echo "${type}s" ;;
+    esac
+}
+
 resolve_dependencies() {
     local component=$1
     local type="${component%%:*}"
     local id="${component##*:}"
     
+    # Get the correct registry key (handles singular/plural)
+    local registry_key=$(get_registry_key "$type")
+    
     # Get dependencies for this component
-    local deps=$(jq -r ".components.${type}s[] | select(.id == \"${id}\") | .dependencies[]?" "$TEMP_DIR/registry.json" 2>/dev/null || echo "")
+    local deps=$(jq -r ".components.${registry_key}[] | select(.id == \"${id}\") | .dependencies[]?" "$TEMP_DIR/registry.json" 2>/dev/null || echo "")
     
     if [ -n "$deps" ]; then
         for dep in $deps; do
@@ -592,7 +605,8 @@ perform_installation() {
     for comp in "${SELECTED_COMPONENTS[@]}"; do
         local type="${comp%%:*}"
         local id="${comp##*:}"
-        local path=$(jq -r ".components.${type}s[] | select(.id == \"${id}\") | .path" "$TEMP_DIR/registry.json")
+        local registry_key=$(get_registry_key "$type")
+        local path=$(jq -r ".components.${registry_key}[] | select(.id == \"${id}\") | .path" "$TEMP_DIR/registry.json")
         
         if [ -n "$path" ] && [ "$path" != "null" ] && [ -f "$path" ]; then
             collisions+=("$path")
@@ -651,8 +665,11 @@ perform_installation() {
         local type="${comp%%:*}"
         local id="${comp##*:}"
         
+        # Get the correct registry key (handles singular/plural)
+        local registry_key=$(get_registry_key "$type")
+        
         # Get component path
-        local path=$(jq -r ".components.${type}s[] | select(.id == \"${id}\") | .path" "$TEMP_DIR/registry.json")
+        local path=$(jq -r ".components.${registry_key}[] | select(.id == \"${id}\") | .path" "$TEMP_DIR/registry.json")
         
         if [ -z "$path" ] || [ "$path" = "null" ]; then
             print_warning "Could not find path for ${comp}"

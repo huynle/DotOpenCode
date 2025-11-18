@@ -1,7 +1,6 @@
 ---
 description: Specialized agent for image editing and analysis using Gemini AI tools
 mode: primary
-model: anthropic/claude-sonnet-4-20250514
 temperature: 0.3
 permission:
   edit: deny

@@ -103,16 +103,16 @@ The installer offers:
 <summary><b>macOS / Linux / Git Bash / WSL</b></summary>
 
 ```bash
-# Core essentials only (15 components)
+# Core - Minimal essentials (9 components)
 curl -fsSL https://raw.githubusercontent.com/darrenhinde/opencode-agents/main/install.sh | bash -s core
 
-# Balanced for daily development (22 components)
+# Developer - Recommended for daily work (22 components)
 curl -fsSL https://raw.githubusercontent.com/darrenhinde/opencode-agents/main/install.sh | bash -s developer
 
-# Everything included (25 components)
+# Full - Everything included (25 components)
 curl -fsSL https://raw.githubusercontent.com/darrenhinde/opencode-agents/main/install.sh | bash -s full
 
-# Advanced + System Builder (23 components)
+# Advanced - Full + System Builder (30 components)
 curl -fsSL https://raw.githubusercontent.com/darrenhinde/opencode-agents/main/install.sh | bash -s advanced
 ```
 </details>
@@ -402,23 +402,24 @@ curl -o ~/.opencode/agent/codebase-agent.md \
 
 The installer offers four pre-configured profiles:
 
-### 🎯 Core (Minimal)
-Essential agents and commands for basic OpenCode usage.
+### 🎯 Core (Minimal - 9 components)
+Absolute essentials for basic development workflow.
 - **Agents**: task-manager, codebase-agent
-- **Subagents**: reviewer, tester, documentation, coder-agent, build-agent
-- **Commands**: test, commit, context
-- **Tools**: env utilities
-- **Best for**: Getting started, minimal setup
+- **Subagents**: tester, documentation, coder-agent
+- **Commands**: commit
+- **Context**: essential-patterns, project-context
+- **Config**: env-example
+- **Best for**: Minimal setup, learning the system
 
-### 💼 Developer (Recommended)
-Balanced setup for daily development work.
+### 💼 Developer (Recommended - 22 components)
+Complete daily development setup with AI assistance.
 - Everything in Core, plus:
 - **Agents**: image-specialist, workflow-orchestrator
-- **Subagents**: codebase-pattern-analyst
-- **Commands**: clean, optimize, prompt-enhancer
-- **Tools**: Gemini AI integration
-- **Plugins**: Telegram notifications
-- **Best for**: Most developers, daily use
+- **Subagents**: reviewer, build-agent, codebase-pattern-analyst
+- **Commands**: test, context, clean, optimize, prompt-enhancer
+- **Tools**: env, gemini (AI image generation)
+- **Config**: readme
+- **Best for**: Most developers, daily use, full-featured
 
 ### 📦 Full
 Complete installation with all available components.

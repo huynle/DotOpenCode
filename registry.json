@@ -483,28 +483,22 @@
   "profiles": {
     "core": {
       "name": "Core",
-      "description": "Essential agents and commands for basic OpenCode usage",
+      "description": "Minimal essentials - main agent with basic subagents and commands",
       "components": [
         "agent:task-manager",
         "agent:codebase-agent",
-        "subagent:reviewer",
         "subagent:tester",
         "subagent:documentation",
         "subagent:coder-agent",
-        "subagent:build-agent",
-        "command:test",
         "command:commit",
-        "command:context",
-        "command:prompt-enhancer",
         "context:essential-patterns",
         "context:project-context",
-        "config:env-example",
-        "config:readme"
+        "config:env-example"
       ]
     },
     "developer": {
       "name": "Developer",
-      "description": "Balanced setup for daily development work with all core features plus useful extensions",
+      "description": "Recommended for daily development - includes testing, review, quality tools, and AI image generation",
       "components": [
         "agent:task-manager",
         "agent:codebase-agent",
@@ -532,7 +526,7 @@
     },
     "full": {
       "name": "Full",
-      "description": "Complete installation with all available components including plugins",
+      "description": "Everything included - all agents, tools, and plugins for maximum functionality",
       "components": [
         "agent:task-manager",
         "agent:codebase-agent",
