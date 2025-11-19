@@ -275,6 +275,17 @@ get_registry_key() {
     esac
 }
 
+# Helper function to convert registry path to installation path
+# Registry paths are like ".opencode/agent/foo.md"
+# We need to replace ".opencode" with the actual INSTALL_DIR
+get_install_path() {
+    local registry_path=$1
+    # Strip leading .opencode/ if present
+    local relative_path="${registry_path#.opencode/}"
+    # Return INSTALL_DIR + relative path
+    echo "${INSTALL_DIR}/${relative_path}"
+}
+
 resolve_dependencies() {
     local component=$1
     local type="${component%%:*}"
@@ -809,8 +820,11 @@ perform_installation() {
         local registry_key=$(get_registry_key "$type")
         local path=$(jq -r ".components.${registry_key}[] | select(.id == \"${id}\") | .path" "$TEMP_DIR/registry.json")
         
-        if [ -n "$path" ] && [ "$path" != "null" ] && [ -f "$path" ]; then
-            collisions+=("$path")
+        if [ -n "$path" ] && [ "$path" != "null" ]; then
+            local install_path=$(get_install_path "$path")
+            if [ -f "$install_path" ]; then
+                collisions+=("$install_path")
+            fi
         fi
     done
     
@@ -878,9 +892,12 @@ perform_installation() {
             continue
         fi
         
+        # Convert registry path to installation path
+        local dest=$(get_install_path "$path")
+        
         # Check if file exists before we install (for proper messaging)
         local file_existed=false
-        if [ -f "$path" ]; then
+        if [ -f "$dest" ]; then
             file_existed=true
         fi
         
@@ -893,7 +910,6 @@ perform_installation() {
         
         # Download component
         local url="${RAW_URL}/${path}"
-        local dest="${path}"
         
         # Create parent directory if needed
         mkdir -p "$(dirname "$dest")"
@@ -945,7 +961,7 @@ show_post_install() {
     echo "1. Review the installed components in ${CYAN}${INSTALL_DIR}/${NC}"
     
     # Check if env.example was installed
-    if [ -f "${INSTALL_DIR}/../env.example" ] || [ -f "env.example" ]; then
+    if [ -f "${INSTALL_DIR}/env.example" ] || [ -f "env.example" ]; then
         echo "2. Copy env.example to .env and configure:"
         echo "   ${CYAN}cp env.example .env${NC}"
         echo "3. Start using OpenCode agents:"
