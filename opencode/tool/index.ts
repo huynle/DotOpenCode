@@ -25,3 +25,10 @@ export {
   getApiKey,
   type EnvLoaderConfig
 } from "./env"
+
+// URL validation tools
+export {
+  validate,           // Validate URLs for format, security, and accessibility
+  checkAccessibility, // Check if URL is accessible
+  default as urlValidator  // Default export (validate tool)
+} from "./url-validator"

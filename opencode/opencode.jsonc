@@ -77,7 +77,7 @@
       "environment": {
         "FIRECRAWL_API_KEY": "{env:FIRECRAWL_API_KEY}"
       },
-      "enabled": false,
+      "enabled": true,
     },
     "excalidraw": {
       "type": "local",
