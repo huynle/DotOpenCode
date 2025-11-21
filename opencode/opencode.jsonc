@@ -1,0 +1,223 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": true,
+  "permission": {
+    "external_directory": "ask"
+  },
+  "provider": {
+    "aifactory": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AI Factory",
+      "options": {
+        "baseURL": "https://api.ai.us.lmco.com/v1",
+        "apiKey": "{env:LM_LLM_TOKEN}",
+      },
+      "models": {
+        "llama-3.3-70b-instruct": {
+          "name": "Llama 3.3 70b Instruct",
+        },
+      },
+    },
+  },
+  "tui": {
+    "scroll_speed": 3,
+    "scroll_acceleration": {
+      "enabled": true
+    }
+  },
+  "mcp": {
+    "browsermcp": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "npx",
+        "@browsermcp/mcp@latest"
+      ],
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "npx",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "appwrite": {
+      // https://appwrite.io/docs/tooling/mcp/opencode
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "uvx",
+        "mcp-server-appwrite"
+      ]
+    },
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": false
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "enabled": false
+    },
+    "firecrawl-mcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "firecrawl-mcp"
+      ],
+      "environment": {
+        "FIRECRAWL_API_KEY": "{env:FIRECRAWL_API_KEY}"
+      },
+      "enabled": false,
+    },
+    "excalidraw": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "docker",
+        "run",
+        "-i",
+        "--rm",
+        "--network",
+        "host",
+        "-e",
+        "EXPRESS_SERVER_URL=http://localhost:3000",
+        "-e",
+        "ENABLE_CANVAS_SYNC=true",
+        "ghcr.io/yctimlin/mcp_excalidraw:latest"
+      ]
+    },
+    "google-keep-mcp": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "pipx",
+        "run",
+        "google-keep-mcp"
+      ],
+      "environment": {
+        "GOOGLE_EMAIL": "dacrazyazn@gmail.com",
+        "GOOGLE_MASTER_TOKEN": "{env:GOOGLE_MASTER_TOKEN}"
+      }
+    },
+    "markitdown": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        "/home/user/data:/workdir",
+        "markitdown-mcp:latest"
+      ]
+    },
+    "mobile-mcp": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "npx",
+        "-y",
+        "@mobilenext/mobile-mcp@latest"
+      ]
+    },
+    "vnc-controller": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "mcp-vnc"
+      ],
+      "environment": {
+        "VNC_HOST": "macpro",
+        "VNC_PORT": "5901",
+        // "VNC_PASSWORD": "1031802"
+      }
+    },
+    "remote-macos-use": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "docker",
+        "run",
+        "-i",
+        "-e",
+        "MACOS_USERNAME=huy",
+        "-e",
+        "MACOS_PASSWORD=Four4for..",
+        "-e",
+        "MACOS_HOST=macpro",
+        "--rm",
+        "buryhuang/mcp-remote-macos-use:latest"
+      ]
+    },
+    "ssh-mcp": {
+      "type": "local",
+      "enabled": false,
+      "command": [
+        "npx",
+        "ssh-mcp",
+        "-y",
+        "--",
+        "--host=ubuntu-vm",
+        "--port=22",
+        "--user=huy",
+        "--password=Four4for..",
+        "--sudoPassword=Four4for..",
+        "--timeout=30000",
+        "--maxChars=none"
+      ]
+    },
+  },
+  "keybinds": {
+    "leader": "ctrl+x",
+    "app_exit": "ctrl+c,ctrl+d,<leader>q",
+    "editor_open": "<leader>e",
+    "theme_list": "<leader>t",
+    "sidebar_toggle": "<leader>b",
+    "status_view": "<leader>s",
+    "session_export": "<leader>x",
+    "session_new": "<leader>n",
+    "session_list": "<leader>l",
+    "session_timeline": "<leader>g",
+    "session_share": "none",
+    "session_unshare": "none",
+    "session_interrupt": "escape",
+    "session_compact": "<leader>c",
+    "session_child_cycle": "ctrl+right",
+    "session_child_cycle_reverse": "ctrl+left",
+    "messages_page_up": "pageup",
+    "messages_page_down": "pagedown",
+    "messages_half_page_up": "ctrl+alt+u",
+    "messages_half_page_down": "ctrl+alt+d",
+    "messages_first": "ctrl+g,home",
+    "messages_last": "ctrl+alt+g,end",
+    "messages_copy": "<leader>y",
+    "messages_undo": "<leader>u",
+    "messages_redo": "<leader>r",
+    "messages_toggle_conceal": "<leader>h",
+    "model_list": "<leader>m",
+    "model_cycle_recent": "f2",
+    "model_cycle_recent_reverse": "shift+f2",
+    "command_list": "ctrl+p",
+    "agent_list": "<leader>a",
+    "agent_cycle": "tab",
+    "agent_cycle_reverse": "shift+tab",
+    "input_clear": "ctrl+c",
+    "input_forward_delete": "ctrl+d",
+    "input_paste": "ctrl+v",
+    "input_submit": "enter",
+    "input_newline": "shift+enter,ctrl+j",
+    "history_previous": "up",
+    "history_next": "down"
+  }
+}
