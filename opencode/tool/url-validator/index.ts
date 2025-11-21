@@ -30,18 +30,6 @@ function validateSecurity(url: string): { valid: boolean; issues: string[] } {
   return { valid: issues.length === 0, issues }
 }
 
-async function checkAccessibility(url: string): Promise<{ accessible: boolean; status?: number; error?: string }> {
-  try {
-    const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
-    return { accessible: response.ok, status: response.status }
-  } catch (error) {
-    return { 
-      accessible: false, 
-      error: error instanceof Error ? error.message : 'Network error' 
-    }
-  }
-}
-
 // Main tool function
 async function validateUrl(url: string, options: {
   checkFormat?: boolean

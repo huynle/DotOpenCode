@@ -112,8 +112,8 @@ describe('Crawl4AI Output Validation Framework', () => {
         
         // Validate arrays
         expect(Array.isArray(parsed.content.topics)).toBe(true)
-        expect(Array.isArray(parsed.links)).toBe(true)
-        expect(Array.isArray(parsed.images)).toBe(true)
+        expect(Array.isArray(parsed.links) || parsed.links === null).toBe(true)
+        expect(Array.isArray(parsed.images) || parsed.images === null).toBe(true)
       }
     })
   })

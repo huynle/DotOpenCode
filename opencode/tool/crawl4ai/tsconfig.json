@@ -5,7 +5,8 @@
     "resolvePackageJsonExports": true,
     "resolvePackageJsonImports": true,
     "target": "ES2022",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["*.ts"],
   "exclude": ["node_modules"]

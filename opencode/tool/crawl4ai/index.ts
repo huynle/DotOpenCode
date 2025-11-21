@@ -461,7 +461,7 @@ export async function analyzeContent(config: CrawlConfig): Promise<string> {
     const mockAnalysis = {
       url: config.url,
       timestamp: new Date().toISOString(),
-      metadata: extractMetadata ? {
+      metadata: config.extractMetadata ? {
         title: "Example Page Title",
         description: "This is a mock page description for testing purposes",
         author: "Test Author",
@@ -481,12 +481,12 @@ export async function analyzeContent(config: CrawlConfig): Promise<string> {
           "automation": 1.9
         }
       },
-      links: extractLinks ? [
+      links: config.extractLinks ? [
         { url: `${config.url}/about`, text: "About Us", type: "internal" },
         { url: `${config.url}/contact`, text: "Contact", type: "internal" },
         { url: "https://external.com", text: "External Resource", type: "external" }
       ] : null,
-      images: extractImages ? [
+      images: config.extractImages ? [
         { src: `${config.url}/images/logo.png`, alt: "Company Logo", size: "245x80" },
         { src: `${config.url}/images/hero.jpg`, alt: "Hero Image", size: "1200x400" }
       ] : null,
@@ -496,13 +496,13 @@ export async function analyzeContent(config: CrawlConfig): Promise<string> {
         requests: 24
       }
     }
-
-    return `[TEST MODE] Content analysis for ${config.url}\n\n${format === 'json' ? JSON.stringify(mockAnalysis, null, 2) : `# Content Analysis Report\n\n${JSON.stringify(mockAnalysis, null, 2)}`}`
+    
+    return `[TEST MODE] Content analysis for ${config.url}\n\n${config.format === 'json' ? JSON.stringify(mockAnalysis, null, 2) : `# Content Analysis Report\n\n${JSON.stringify(mockAnalysis, null, 2)}`}`
   }
 
   try {
     // TODO: Implement actual content analysis with Crawl4AI
-    return `Analyzing content from ${config.url}\n\nExtract options:\n- Images: ${extractImages}\n- Links: ${extractLinks}\n- Metadata: ${extractMetadata}\n- Format: ${format}\n\nNote: This is a placeholder implementation. Full content analysis will be implemented in the next phase.`
+    return `Analyzing content from ${config.url}\n\nExtract options:\n- Images: ${config.extractImages}\n- Links: ${config.extractLinks}\n- Metadata: ${config.extractMetadata}\n- Format: ${config.format}\n\nNote: This is a placeholder implementation. Full content analysis will be implemented in the next phase.`
   } catch (error) {
     throw new Error(`Content analysis failed: ${error.message}`)
   }
@@ -591,7 +591,7 @@ export const download = tool({
 })
 
 // Content analysis tool
-export const analyzeContent = tool({
+export const analyze = tool({
   description: "Analyze and extract structured data from web page with comprehensive insights",
   args: {
     url: tool.schema.string().describe("URL to analyze"),

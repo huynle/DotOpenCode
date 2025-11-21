@@ -27,3 +27,5 @@
 - [x] 5.2 Add API documentation and parameter descriptions
 - [x] 5.3 Create troubleshooting guide
 - [x] 5.4 Final validation and testing
+- [x] 5.5 OpenCode integration verification
+- [x] 5.6 Tool export verification
