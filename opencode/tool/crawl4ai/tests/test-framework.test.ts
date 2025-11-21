@@ -1,5 +1,4 @@
 import { test, describe } from "bun:test";
-import { runValidationSuite, runPerformanceBenchmarks } from "./validation.test";
 
 // Test configuration and fixtures
 interface TestConfig {
@@ -324,13 +323,3 @@ describe("Crawl4AI Performance Benchmarks", () => {
   });
 });
 
-// Test utilities export
-export {
-  MockCrawlServer,
-  generateTestUrls,
-  generateTestContent,
-  expectValidCrawlResult,
-  expectValidDeepCrawlResults,
-  measurePerformance,
-  integrationTestScenarios
-};

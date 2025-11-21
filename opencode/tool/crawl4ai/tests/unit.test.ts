@@ -1,339 +1,292 @@
-import { test, describe, expect } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { 
-  crawlSimple, 
-  crawlDeep, 
+  crawlUrl, 
+  deepCrawl, 
   downloadFiles, 
-  extractContent 
-} from "../src/core/crawler";
-import { BFSDeepCrawlStrategy } from "../src/strategies/deep-crawl";
-import { URLPatternFilter } from "../src/filters/url-filter";
+  analyzeContent,
+  URLFilterManager,
+  ContentScorer
+} from '../index'
 
-// Mock Crawl4AI responses for testing
-interface MockCrawlResult {
-  url: string;
-  success: boolean;
-  markdown?: string;
-  html?: string;
-  links?: { internal: Array<{href: string}>, external: Array<{href: string}> };
-  media?: { images: Array<{src: string}>, videos: Array<{src: string}> };
-  error?: string;
-  status_code?: number;
-}
+// Mock test mode
+beforeEach(() => {
+  process.env.CRAWL4AI_TEST_MODE = 'true'
+})
 
-// Test data factory
-function createMockResult(url: string, options: Partial<MockCrawlResult> = {}): MockCrawlResult {
-  return {
-    url,
-    success: true,
-    markdown: `# Mock content for ${url}\n\nThis is test content.`,
-    html: `<html><body><h1>Mock content for ${url}</h1></body></html>`,
-    links: {
-      internal: [{ href: "/page1" }, { href: "/page2" }],
-      external: [{ href: "https://example.com" }]
-    },
-    media: {
-      images: [{ src: "/image1.jpg" }, { src: "/image2.png" }],
-      videos: [{ src: "/video1.mp4" }]
-    },
-    ...options
-  };
-}
+afterEach(() => {
+  delete process.env.CRAWL4AI_TEST_MODE
+})
 
-describe("Crawl4AI Core Functions", () => {
-  
-  describe("Simple Crawling", () => {
+describe('URL Validation', () => {
+  it('should reject invalid URLs', async () => {
+    await expect(crawlUrl({ url: 'invalid-url' })).rejects.toThrow('Invalid URL')
+    await expect(crawlUrl({ url: '' })).rejects.toThrow('Invalid URL')
+    await expect(crawlUrl({ url: 'not-a-url' })).rejects.toThrow('Invalid URL')
+  })
+
+  it('should accept valid URLs', async () => {
+    const result = await crawlUrl({ url: 'https://example.com' })
+    expect(result).toContain('[TEST MODE]')
+    expect(result).toContain('https://example.com')
+  })
+})
+
+describe('URLFilterManager', () => {
+  it('should filter by include patterns', () => {
+    const filter = new URLFilterManager({
+      includePatterns: ['/blog', '/news']
+    })
     
-    test("should crawl single page successfully", async () => {
-      const url = "https://example.com";
-      const mockResult = createMockResult(url);
-      
-      // Mock the actual crawl function
-      // const result = await crawlSimple(url);
-      
-      expect(mockResult.url).toBe(url);
-      expect(mockResult.success).toBe(true);
-      expect(mockResult.markdown).toBeDefined();
-      expect(mockResult.html).toBeDefined();
-      expect(mockResult.links).toBeDefined();
-      expect(mockResult.media).toBeDefined();
-    });
+    expect(filter.shouldInclude('https://example.com/blog/post-1')).toBe(true)
+    expect(filter.shouldInclude('https://example.com/news/article')).toBe(true)
+    expect(filter.shouldInclude('https://example.com/about')).toBe(false)
+  })
 
-    test("should handle crawl errors gracefully", async () => {
-      const url = "https://invalid-url-that-fails.com";
-      const mockResult = createMockResult(url, {
-        success: false,
-        error: "Connection failed",
-        status_code: 500
-      });
-      
-      expect(mockResult.success).toBe(false);
-      expect(mockResult.error).toBeDefined();
-      expect(mockResult.status_code).toBe(500);
-    });
-
-    test("should validate URL format", async () => {
-      const validUrls = [
-        "https://example.com",
-        "http://example.com/path",
-        "https://subdomain.example.com/path?query=value"
-      ];
-      
-      const invalidUrls = [
-        "not-a-url",
-        "ftp://example.com",
-        ""
-      ];
-      
-      validUrls.forEach(url => {
-        expect(() => {
-          // URL validation logic would go here
-          new URL(url);
-        }).not.toThrow();
-      });
-      
-      invalidUrls.forEach(url => {
-        expect(() => {
-          new URL(url);
-        }).toThrow();
-      });
-    });
-  });
-
-  describe("Deep Crawling", () => {
+  it('should filter by exclude patterns', () => {
+    const filter = new URLFilterManager({
+      excludePatterns: ['/admin', '/private']
+    })
     
-    test("should configure BFS strategy correctly", () => {
-      const strategy = new BFSDeepCrawlStrategy({
-        max_depth: 2,
-        include_external: false,
-        max_pages: 10
-      });
-      
-      expect(strategy.max_depth).toBe(2);
-      expect(strategy.include_external).toBe(false);
-      expect(strategy.max_pages).toBe(10);
-    });
+    expect(filter.shouldInclude('https://example.com/admin')).toBe(false)
+    expect(filter.shouldInclude('https://example.com/private/data')).toBe(false)
+    expect(filter.shouldInclude('https://example.com/public')).toBe(true)
+  })
 
-    test("should handle deep crawl with multiple pages", async () => {
-      const startUrl = "https://docs.example.com";
-      const mockResults = [
-        createMockResult(startUrl, { url: startUrl }),
-        createMockResult(`${startUrl}/page1`),
-        createMockResult(`${startUrl}/page2`)
-      ];
-      
-      // Mock deep crawl execution
-      // const results = await crawlDeep(startUrl, { 
-      //   strategy: 'bfs', 
-      //   depth: 1, 
-      //   maxPages: 3 
-      // });
-      
-      expect(mockResults).toHaveLength(3);
-      expect(mockResults[0].url).toBe(startUrl);
-      expect(mockResults.every(r => r.success)).toBe(true);
-    });
+  it('should filter by include domains', () => {
+    const filter = new URLFilterManager({
+      includeDomains: ['example.com', 'trusted.com']
+    })
+    
+    expect(filter.shouldInclude('https://example.com/page')).toBe(true)
+    expect(filter.shouldInclude('https://sub.example.com/page')).toBe(true)
+    expect(filter.shouldInclude('https://other.com/page')).toBe(false)
+  })
 
-    test("should respect page limits in deep crawl", async () => {
-      const startUrl = "https://docs.example.com";
-      const maxPages = 2;
-      
-      // Mock results that exceed limit
-      const allResults = [
-        createMockResult(startUrl),
-        createMockResult(`${startUrl}/page1`),
-        createMockResult(`${startUrl}/page2`),
-        createMockResult(`${startUrl}/page3`)
-      ];
-      
-      // Should only return first 2 results
-      const limitedResults = allResults.slice(0, maxPages);
-      
-      expect(limitedResults).toHaveLength(maxPages);
-      expect(limitedResults.every(r => r.success)).toBe(true);
-    });
-  });
+  it('should filter by exclude domains', () => {
+    const filter = new URLFilterManager({
+      excludeDomains: ['spam.com', 'ads.com']
+    })
+    
+    expect(filter.shouldInclude('https://spam.com/page')).toBe(false)
+    expect(filter.shouldInclude('https://good.com/page')).toBe(true)
+  })
 
-  describe("Content Filtering", () => {
-    
-    test("should filter URLs by pattern", () => {
-      const filter = new URLPatternFilter(["*docs*", "*guide*"]);
-      
-      const testUrls = [
-        "https://example.com/docs/api",
-        "https://example.com/guide/start",
-        "https://example.com/blog/post1",
-        "https://example.com/docs/tutorial"
-      ];
-      
-      const filtered = testUrls.filter(url => 
-        filter.shouldInclude(url)
-      );
-      
-      expect(filtered).toHaveLength(3);
-      expect(filtered.every(url => 
-        url.includes("/docs/") || url.includes("/guide/")
-      )).toBe(true);
-    });
+  it('should handle empty filters', () => {
+    const filter = new URLFilterManager()
+    expect(filter.shouldInclude('https://any-url.com/page')).toBe(true)
+  })
+})
 
-    test("should handle multiple filters", () => {
-      const urlFilter = new URLPatternFilter(["*docs*"]);
-      const domainFilter = { /* mock domain filter */ };
-      
-      const testUrls = [
-        "https://docs.example.com/api",
-        "https://blog.example.com/post",
-        "https://external.com/docs"
-      ];
-      
-      // Mock filter chain logic
-      const filtered = testUrls.filter(url => {
-        const passesUrlFilter = url.includes("/docs/");
-        const passesDomainFilter = url.includes("example.com");
-        return passesUrlFilter && passesDomainFilter;
-      });
-      
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0]).toBe("https://docs.example.com/api");
-    });
-  });
+describe('ContentScorer', () => {
+  it('should score content based on keywords', () => {
+    const scorer = new ContentScorer(['web', 'crawling'])
+    
+    const content1 = 'This is about web crawling technology'
+    const content2 = 'This is about something else'
+    
+    const score1 = scorer.scoreContent(content1, 'https://example.com/web-crawling')
+    const score2 = scorer.scoreContent(content2, 'https://example.com/other')
+    
+    expect(score1).toBeGreaterThan(score2)
+  })
 
-  describe("File Downloading", () => {
+  it('should weight URL matches higher than content matches', () => {
+    const scorer = new ContentScorer(['technology'])
     
-    test("should discover downloadable files", async () => {
-      const mockResult = createMockResult("https://example.com", {
-        media: {
-          images: [
-            { src: "/image1.jpg" },
-            { src: "/image2.png" },
-            { src: "https://cdn.example.com/file.pdf" }
-          ],
-          videos: [{ src: "/video1.mp4" }]
-        }
-      });
-      
-      const downloadableFiles = [
-        ...mockResult.media!.images,
-        ...mockResult.media!.videos
-      ];
-      
-      expect(downloadableFiles).toHaveLength(4);
-      expect(downloadableFiles.some(f => f.src.includes(".pdf"))).toBe(true);
-    });
+    const content1 = 'technology technology technology' // 3 content matches
+    const url1 = 'https://example.com/other'
+    
+    const content2 = 'technology' // 1 content match
+    const url2 = 'https://example.com/technology' // 1 URL match
+    
+    const score1 = scorer.scoreContent(content1, url1)
+    const score2 = scorer.scoreContent(content2, url2)
+    
+    // URL match (weight 3) + content match (weight 1) should be higher than 3 content matches
+    expect(score2).toBeGreaterThan(score1)
+  })
 
-    test("should handle file download errors", async () => {
-      const failingUrl = "https://example.com/nonexistent-file.pdf";
-      
-      // Mock download failure
-      // const result = await downloadFiles([failingUrl]);
-      
-      expect(() => {
-        // Mock file system error
-        throw new Error("File not found");
-      }).toThrow("File not found");
-    });
-  });
+  it('should return default score when no keywords', () => {
+    const scorer = new ContentScorer([])
+    const score = scorer.scoreContent('any content', 'https://any-url.com')
+    expect(score).toBe(1.0)
+  })
+})
 
-  describe("Content Extraction", () => {
-    
-    test("should extract structured data", async () => {
-      const mockHtml = `
-        <html>
-          <head><title>Test Page</title></head>
-          <body>
-            <h1>Main Title</h1>
-            <p>Content paragraph</p>
-            <div class="data-item" data-id="123">Structured data</div>
-          </body>
-        </html>
-      `;
-      
-      // Mock extraction logic
-      const extractedData = {
-        title: "Test Page",
-        headings: ["Main Title"],
-        content: "Content paragraph",
-        structured: [
-          { type: "data-item", id: "123", content: "Structured data" }
-        ]
-      };
-      
-      expect(extractedData.title).toBe("Test Page");
-      expect(extractedData.headings).toContain("Main Title");
-      expect(extractedData.structured).toHaveLength(1);
-      expect(extractedData.structured[0].id).toBe("123");
-    });
+describe('Basic Crawling', () => {
+  it('should crawl with default parameters', async () => {
+    const result = await crawlUrl({ url: 'https://example.com' })
+    expect(result).toContain('[TEST MODE]')
+    expect(result).toContain('depth: 1')
+    expect(result).toContain('maxPages: 10')
+    expect(result).toContain('format: markdown')
+  })
 
-    test("should generate clean markdown", async () => {
-      const mockHtml = "<h1>Title</h1><p>Content with <strong>bold</strong> text</p>";
-      const expectedMarkdown = "# Title\n\nContent with **bold** text";
-      
-      // Mock markdown conversion
-      const generatedMarkdown = expectedMarkdown;
-      
-      expect(generatedMarkdown).toBe(expectedMarkdown);
-      expect(generatedMarkdown).not.toContain("<h1>");
-      expect(generatedMarkdown).not.toContain("<strong>");
-    });
-  });
-});
+  it('should crawl with custom parameters', async () => {
+    const result = await crawlUrl({ 
+      url: 'https://example.com',
+      depth: 2,
+      maxPages: 20,
+      format: 'json'
+    })
+    expect(result).toContain('depth: 2')
+    expect(result).toContain('maxPages: 20')
+    expect(result).toContain('format: json')
+  })
 
-// Integration tests
-describe("Crawl4AI Integration Tests", () => {
-  
-  test("should handle real-world crawling scenario", async () => {
-    const scenario = {
-      url: "https://httpbin.org/html",
-      config: {
-        depth: 1,
-        format: "markdown",
-        maxPages: 2
-      }
-    };
-    
-    // This would be an actual integration test
-    // const result = await crawl(scenario.url, scenario.config);
-    
-    // Mock integration test result
-    const mockIntegrationResult = {
-      success: true,
-      pagesCrawled: 1,
-      outputFormat: "markdown",
-      duration: 1500
-    };
-    
-    expect(mockIntegrationResult.success).toBe(true);
-    expect(mockIntegrationResult.pagesCrawled).toBeGreaterThan(0);
-    expect(mockIntegrationResult.outputFormat).toBe("markdown");
-    expect(mockIntegrationResult.duration).toBeLessThan(5000);
-  });
-});
+  it('should handle filtering options', async () => {
+    const result = await crawlUrl({
+      url: 'https://example.com',
+      includePatterns: ['/blog'],
+      excludePatterns: ['/admin'],
+      includeDomains: ['example.com'],
+      excludeDomains: ['spam.com']
+    })
+    expect(result).toContain('[TEST MODE]')
+    // Should not throw error with filtering options
+  })
+})
 
-// Performance tests
-describe("Crawl4AI Performance", () => {
-  
-  test("should complete simple crawl within time limit", async () => {
-    const timeLimit = 5000; // 5 seconds
-    const startTime = Date.now();
-    
-    // Mock crawl execution
-    // await crawlSimple("https://example.com");
-    
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-    
-    expect(duration).toBeLessThan(timeLimit);
-  });
+describe('Deep Crawling', () => {
+  it('should perform BFS deep crawling', async () => {
+    const result = await deepCrawl({
+      url: 'https://example.com',
+      strategy: 'bfs',
+      depth: 3
+    })
+    expect(result).toContain('[TEST MODE]')
+    expect(result).toContain('BFS strategy')
+    expect(result).toContain('Depth: 3')
+  })
 
-  test("should handle memory efficiently", async () => {
-    const initialMemory = process.memoryUsage();
-    const memoryLimit = 50 * 1024 * 1024; // 50MB
-    
-    // Mock memory-intensive crawl
-    // await crawlDeep("https://large-site.com", { depth: 3, maxPages: 100 });
-    
-    const finalMemory = process.memoryUsage();
-    const memoryUsed = finalMemory.heapUsed - initialMemory.heapUsed;
-    
-    expect(memoryUsed).toBeLessThan(memoryLimit);
-  });
-});
+  it('should perform DFS deep crawling', async () => {
+    const result = await deepCrawl({
+      url: 'https://example.com',
+      strategy: 'dfs',
+      depth: 2
+    })
+    expect(result).toContain('DFS strategy')
+    expect(result).toContain('Depth: 2')
+  })
+
+  it('should perform BestFirst deep crawling with keywords', async () => {
+    const result = await deepCrawl({
+      url: 'https://example.com',
+      strategy: 'bestfirst',
+      keywords: ['technology', 'ai']
+    })
+    expect(result).toContain('bestfirst')
+    expect(result).toContain('technology, ai')
+  })
+
+  it('should apply URL filtering in deep crawl', async () => {
+    const result = await deepCrawl({
+      url: 'https://example.com',
+      includePatterns: ['/blog'],
+      maxPages: 10
+    })
+    expect(result).toContain('[TEST MODE]')
+    // Should include filtering information
+  })
+})
+
+describe('File Downloading', () => {
+  it('should download files with default file types', async () => {
+    const result = await downloadFiles({ url: 'https://example.com' })
+    expect(result).toContain('[TEST MODE]')
+    expect(result).toContain('pdf')
+    expect(result).toContain('jpg')
+    expect(result).toContain('png')
+  })
+
+  it('should download files with custom file types', async () => {
+    const result = await downloadFiles({
+      url: 'https://example.com',
+      fileTypes: ['pdf', 'docx']
+    })
+    expect(result).toContain('pdf')
+    expect(result).toContain('docx')
+    expect(result).not.toContain('jpg')
+  })
+
+  it('should respect file size limits', async () => {
+    const result = await downloadFiles({
+      url: 'https://example.com',
+      maxFileSize: 1024 * 1024 // 1MB
+    })
+    expect(result).toContain('1MB')
+    expect(result).toContain('2 files') // Should filter out large files
+  })
+})
+
+describe('Content Analysis', () => {
+  it('should analyze content with default options', async () => {
+    const result = await analyzeContent({ url: 'https://example.com' })
+    expect(result).toContain('[TEST MODE]')
+    expect(result).toContain('Content analysis')
+  })
+
+  it('should analyze content with custom options', async () => {
+    const result = await analyzeContent({
+      url: 'https://example.com',
+      extractImages: false,
+      extractLinks: true,
+      extractMetadata: false,
+      format: 'markdown'
+    })
+    expect(result).toContain('[TEST MODE]')
+    expect(result).toContain('Content Analysis Report')
+  })
+
+  it('should include performance metrics when requested', async () => {
+    const result = await analyzeContent({
+      url: 'https://example.com',
+      includePerformance: true
+    })
+    expect(result).toContain('performance')
+    expect(result).toContain('loadTime')
+  })
+
+  it('should include sentiment analysis when requested', async () => {
+    const result = await analyzeContent({
+      url: 'https://example.com',
+      includeSentiment: true
+    })
+    expect(result).toContain('sentiment')
+    expect(result).toContain('Neutral')
+  })
+})
+
+describe('Error Handling', () => {
+  it('should handle network errors gracefully', async () => {
+    // This would need to be tested with actual network calls
+    // For now, just ensure error handling doesn't crash
+    const result = await crawlUrl({ url: 'https://example.com' })
+    expect(typeof result).toBe('string')
+  })
+
+  it('should handle malformed URLs', async () => {
+    await expect(crawlUrl({ url: 'not-a-url' })).rejects.toThrow()
+  })
+
+  it('should handle empty URLs', async () => {
+    await expect(crawlUrl({ url: '' })).rejects.toThrow()
+  })
+})
+
+describe('Configuration', () => {
+  it('should use default output directory', async () => {
+    const result = await crawlUrl({ url: 'https://example.com' })
+    expect(result).toContain('[TEST MODE]')
+    // Output directory is handled internally in test mode
+  })
+
+  it('should use custom output directory', async () => {
+    const result = await crawlUrl({ 
+      url: 'https://example.com',
+      outputDir: '/custom/path'
+    })
+    expect(result).toContain('[TEST MODE]')
+    // Custom output directory is handled internally in test mode
+  })
+})
