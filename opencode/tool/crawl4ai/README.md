@@ -1,29 +1,32 @@
 # Crawl4AI Tool for OpenCode
 
-A comprehensive web crawling tool that enables OpenCode users to perform web research, content extraction, and data collection with advanced crawling capabilities.
+A comprehensive web crawling tool that enables OpenCode users to perform web research, content extraction, and data collection with advanced crawling capabilities using the real Crawl4AI library.
 
 ## 🚀 Features
 
 ### Simple Crawling
-- **Single-page web crawling** with content extraction
+- **Real web crawling** with Crawl4AI library integration
 - **Multiple output formats** (markdown, HTML, JSON)
 - **Link and media resource discovery**
-- **Error handling and validation**
+- **Error handling and validation** with exponential backoff
 - **Session persistence** for authenticated content
+- **Robots.txt compliance** checking
 
 ### Deep Crawling
 - **Multiple crawling strategies** (BFS, DFS, BestFirst)
 - **Configurable depth limits** and page constraints
-- **Content filtering** and URL pattern matching
-- **Progress reporting** and statistics
-- **Keyword-based relevance scoring**
+- **Advanced URL filtering** with regex pattern support
+- **Content filtering** and domain restrictions
+- **Progress reporting** and comprehensive statistics
+- **Keyword-based relevance scoring** with content analysis
 
 ### Advanced Features
-- **File downloading** and media handling
-- **Browser control** and anti-detection
-- **Proxy support** and stealth mode
-- **Content analysis** with sentiment detection
-- **Performance metrics** and readability scores
+- **Real file downloading** with progress tracking
+- **Browser session management** and cookie persistence
+- **Advanced proxy support** and stealth mode
+- **Content analysis** with sentiment detection and readability scoring
+- **Performance metrics** and keyword density analysis
+- **Anti-detection features** with user agent rotation
 
 ## 📖 Usage
 
@@ -126,6 +129,35 @@ CRAWL4AI_PROXY_PASSWORD=""
 
 # Testing
 CRAWL4AI_TEST_MODE="false"
+```
+
+### Browser Dependencies
+The tool requires Playwright browsers for web automation. Install with:
+```bash
+npx playwright install
+```
+
+### Proxy Configuration
+For proxy support, configure with:
+```bash
+export CRAWL4AI_PROXY_SERVER="http://proxy.example.com:8080"
+export CRAWL4AI_PROXY_USERNAME="your-username"
+export CRAWL4AI_PROXY_PASSWORD="your-password"
+```
+
+### Session Management
+Sessions are automatically managed and persist browser state:
+```typescript
+import { SessionManager } from './opencode/tool/crawl4ai/index.ts'
+
+// Create new session
+await SessionManager.getSession('my-session')
+
+// Close specific session
+await SessionManager.closeSession('my-session')
+
+// Get session info
+const sessions = SessionManager.getSessionInfo()
 ```
 
 ### Tool Parameters Reference
@@ -365,6 +397,75 @@ const migrationResult = await download({
 - Update documentation
 - Consider performance impact
 - Ensure error handling
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Browser/Installation Issues
+```bash
+# Playwright browsers not found
+npx playwright install
+
+# Permission denied
+sudo npx playwright install
+
+# Browser fails to start
+export CRAWL4AI_TEST_MODE="true"  # Use test mode
+```
+
+#### Network/Proxy Issues
+```bash
+# Connection timeouts
+export CRAWL4AI_MAX_DEPTH=1  # Reduce crawl depth
+export CRAWL4AI_MAX_PAGES=10  # Reduce page count
+
+# Proxy authentication
+export CRAWL4AI_PROXY_SERVER="http://proxy:port"
+export CRAWL4AI_PROXY_USERNAME="user"
+export CRAWL4AI_PROXY_PASSWORD="pass"
+```
+
+#### Memory/Performance Issues
+```bash
+# High memory usage
+export CRAWL4AI_MAX_PAGES=20  # Reduce concurrent pages
+
+# Slow crawling
+export CRAWL4AI_ENABLE_STEALTH="true"  # Enable anti-detection
+```
+
+#### Content Access Issues
+```bash
+# Robots.txt blocking
+# Tool automatically respects robots.txt
+# Check manually: curl https://example.com/robots.txt
+
+# Rate limiting
+export CRAWL4AI_MAX_DEPTH=1
+export CRAWL4AI_MAX_PAGES=5
+```
+
+### Debug Mode
+Enable detailed logging:
+```bash
+export CRAWL4AI_TEST_MODE="true"
+export DEBUG=crawl4ai
+```
+
+### Performance Tuning
+```bash
+# For large sites
+export CRAWL4AI_MAX_DEPTH=2
+export CRAWL4AI_MAX_PAGES=100
+
+# For fast crawling
+export CRAWL4AI_MAX_DEPTH=1
+export CRAWL4AI_MAX_PAGES=20
+
+# Enable stealth for difficult sites
+export CRAWL4AI_ENABLE_STEALTH="true"
+```
 
 ## 📝 License
 

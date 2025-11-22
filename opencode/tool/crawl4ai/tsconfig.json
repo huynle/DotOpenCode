@@ -6,7 +6,10 @@
     "resolvePackageJsonImports": true,
     "target": "ES2022",
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
   "include": ["*.ts"],
   "exclude": ["node_modules"]

@@ -1,6 +1,7 @@
 import { tool } from "@opencode-ai/plugin/tool"
-import { mkdir } from "fs/promises"
-import { join, resolve, basename, extname } from "path"
+import { mkdir, writeFile } from "fs/promises"
+import { join, resolve, basename, extname, dirname } from "path"
+import { Crawl4AI } from "crawl4ai"
 
 // Function to detect if we're in test mode
 function isTestMode(): boolean {
@@ -30,6 +31,182 @@ function isValidUrl(url: string): boolean {
     return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
   } catch {
     return false
+  }
+}
+
+// Robots.txt compliance checker
+class RobotsTxtChecker {
+  private cache = new Map<string, any>()
+
+  async checkAllowed(url: string, userAgent: string = '*'): Promise<boolean> {
+    try {
+      const urlObj = new URL(url)
+      const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`
+      
+      // Check cache first
+      if (this.cache.has(robotsUrl)) {
+        const cached = this.cache.get(robotsUrl)
+        if (Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) { // 24 hours cache
+          return this.isPathAllowed(cached.rules, urlObj.pathname, userAgent)
+        }
+      }
+
+      // Fetch robots.txt
+      const response = await fetch(robotsUrl)
+      if (!response.ok) {
+        // No robots.txt or error, allow crawling
+        this.cache.set(robotsUrl, { rules: [], timestamp: Date.now() })
+        return true
+      }
+
+      const robotsTxt = await response.text()
+      const rules = this.parseRobotsTxt(robotsTxt)
+      
+      // Cache the rules
+      this.cache.set(robotsUrl, { rules, timestamp: Date.now() })
+      
+      return this.isPathAllowed(rules, urlObj.pathname, userAgent)
+    } catch (error) {
+      // Error checking robots.txt, allow crawling
+      console.warn(`Failed to check robots.txt for ${url}: ${error.message}`)
+      return true
+    }
+  }
+
+  private parseRobotsTxt(robotsTxt: string): any[] {
+    const rules: any[] = []
+    let currentUserAgent = '*'
+    
+    robotsTxt.split('\n').forEach(line => {
+      line = line.trim()
+      if (!line || line.startsWith('#')) return
+      
+      const [directive, value] = line.split(':', 2)
+      if (!directive || !value) return
+      
+      const cleanDirective = directive.trim().toLowerCase()
+      const cleanValue = value.trim()
+      
+      if (cleanDirective === 'user-agent') {
+        currentUserAgent = cleanValue
+      } else if (cleanDirective === 'disallow' || cleanDirective === 'allow') {
+        rules.push({
+          userAgent: currentUserAgent,
+          directive: cleanDirective,
+          path: cleanValue
+        })
+      }
+    })
+    
+    return rules
+  }
+
+  private isPathAllowed(rules: any[], path: string, userAgent: string): boolean {
+    const relevantRules = rules.filter(rule => 
+      rule.userAgent === '*' || rule.userAgent.toLowerCase().includes(userAgent.toLowerCase())
+    )
+
+    let allowed = true
+    for (const rule of relevantRules) {
+      if (this.pathMatches(rule.path, path)) {
+        allowed = rule.directive === 'allow'
+      }
+    }
+
+    return allowed
+  }
+
+  private pathMatches(rulePath: string, actualPath: string): boolean {
+    if (rulePath === '/') return true
+    if (rulePath === actualPath) return true
+    
+    // Simple wildcard matching
+    const regex = new RegExp('^' + rulePath.replace(/\*/g, '.*').replace(/\?/g, '.') + '$')
+    return regex.test(actualPath)
+  }
+}
+
+// Global robots.txt checker instance
+const robotsChecker = new RobotsTxtChecker()
+
+// Session management for browser persistence
+class SessionManager {
+  private static sessions = new Map<string, any>()
+  private static defaultSessionId = 'default'
+
+  static async getSession(sessionId?: string): Promise<any> {
+    const id = sessionId || this.defaultSessionId
+    
+    if (!this.sessions.has(id)) {
+      // Create new browser context for session
+      const crawler = new Crawl4AI({
+        headless: true,
+        verbose: false,
+        userDataDir: sessionId ? `./sessions/${sessionId}` : undefined,
+        browserType: 'chromium'
+      })
+      
+      this.sessions.set(id, {
+        crawler,
+        createdAt: Date.now(),
+        lastUsed: Date.now(),
+        id
+      })
+    }
+
+    const session = this.sessions.get(id)
+    session.lastUsed = Date.now()
+    return session
+  }
+
+  static async closeSession(sessionId?: string): Promise<void> {
+    const id = sessionId || this.defaultSessionId
+    
+    if (this.sessions.has(id)) {
+      const session = this.sessions.get(id)
+      try {
+        await session.crawler.close()
+      } catch (error) {
+        console.warn(`Error closing session ${id}: ${error.message}`)
+      }
+      this.sessions.delete(id)
+    }
+  }
+
+  static async closeAllSessions(): Promise<void> {
+    const closePromises = Array.from(this.sessions.keys()).map(id => 
+      this.closeSession(id).catch(console.warn)
+    )
+    await Promise.all(closePromises)
+    this.sessions.clear()
+  }
+
+  static getSessionInfo(): { [key: string]: any } {
+    const info: { [key: string]: any } = {}
+    this.sessions.forEach((session, id) => {
+      info[id] = {
+        id,
+        createdAt: session.createdAt,
+        lastUsed: session.lastUsed,
+        age: Date.now() - session.createdAt
+      }
+    })
+    return info
+  }
+
+  static async cleanupOldSessions(maxAge: number = 60 * 60 * 1000): Promise<void> { // 1 hour default
+    const now = Date.now()
+    const oldSessions: string[] = []
+    
+    this.sessions.forEach((session, id) => {
+      if (now - session.lastUsed > maxAge) {
+        oldSessions.push(id)
+      }
+    })
+
+    for (const id of oldSessions) {
+      await this.closeSession(id)
+    }
   }
 }
 
@@ -71,6 +248,10 @@ interface CrawlConfig {
   // Additional download options
   maxFiles?: number
   recursive?: boolean
+  // Session management options
+  sessionId?: string
+  cookies?: any[]
+  userDataDir?: string
 }
 
 // Interface for crawl result
@@ -113,7 +294,7 @@ enum CrawlStrategy {
   BEST_FIRST = 'bestfirst'
 }
 
-// URL filtering class
+// Enhanced URL filtering class with real filtering capabilities
 class URLFilterManager {
   private filter: URLFilter
 
@@ -144,21 +325,51 @@ class URLFilterManager {
       }
     }
 
-    // Check pattern exclusions
+    // Check pattern exclusions (support regex patterns)
     if (this.filter.excludePatterns.length > 0) {
-      if (this.filter.excludePatterns.some(pattern => url.includes(pattern))) {
+      if (this.filter.excludePatterns.some(pattern => {
+        try {
+          return new RegExp(pattern).test(url)
+        } catch {
+          return url.includes(pattern)
+        }
+      })) {
         return false
       }
     }
 
-    // Check pattern inclusions
+    // Check pattern inclusions (support regex patterns)
     if (this.filter.includePatterns.length > 0) {
-      if (!this.filter.includePatterns.some(pattern => url.includes(pattern))) {
+      if (!this.filter.includePatterns.some(pattern => {
+        try {
+          return new RegExp(pattern).test(url)
+        } catch {
+          return url.includes(pattern)
+        }
+      })) {
         return false
       }
     }
 
     return true
+  }
+
+  // Filter an array of URLs
+  filterUrls(urls: string[]): string[] {
+    return urls.filter(url => this.shouldInclude(url))
+  }
+
+  // Get filter statistics
+  getFilterStats(urls: string[]): { total: number; allowed: number; blocked: number; blockedUrls: string[] } {
+    const allowed = urls.filter(url => this.shouldInclude(url))
+    const blocked = urls.filter(url => !this.shouldInclude(url))
+    
+    return {
+      total: urls.length,
+      allowed: allowed.length,
+      blocked: blocked.length,
+      blockedUrls: blocked
+    }
   }
 }
 
@@ -338,7 +549,7 @@ async function mockDeepCrawl(startUrl: string, config: Partial<CrawlConfig>): Pr
   }
 }
 
-// Main crawling function
+// Main crawling function with real Crawl4AI integration
 export async function crawlUrl(config: CrawlConfig): Promise<string> {
   // Validate input
   if (!config.url || !isValidUrl(config.url)) {
@@ -346,29 +557,125 @@ export async function crawlUrl(config: CrawlConfig): Promise<string> {
   }
 
   // Set defaults
-  const depth = config.depth || 1
-  const maxPages = config.maxPages || 10
   const outputDir = config.outputDir || getDefaultOutputDir()
   const format = config.format || 'markdown'
 
-  // Test mode - return mock response
-  if (isTestMode()) {
-    const result = await mockCrawl(config.url, config)
-    return `[TEST MODE] Would crawl ${config.url} (depth: ${depth}, maxPages: ${maxPages}, format: ${format})\n\nMock Result:\n${JSON.stringify(result, null, 2)}`
-  }
-
   try {
-    // TODO: Implement actual Crawl4AI integration
-    // For now, return a placeholder response
-    await ensureDirectoryExists(outputDir)
-    
-    return `Crawling ${config.url} with depth ${depth}, max pages ${maxPages}, format ${format}\n\nNote: This is a placeholder implementation. Full Crawl4AI integration will be implemented in the next phase.\n\nOutput directory: ${outputDir}`
+    // Check robots.txt compliance
+    const isAllowed = await robotsChecker.checkAllowed(config.url)
+    if (!isAllowed) {
+      throw new Error(`Crawling disallowed by robots.txt for ${config.url}`)
+    }
+
+    // Get or create session
+    const session = config.session ? await SessionManager.getSession(config.sessionId) : null
+    const crawler = session ? session.crawler : new Crawl4AI({
+      headless: true,
+      verbose: true,
+      ignoreCertificateErrors: true,
+      overrideUserAgent: config.stealth ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' : undefined,
+      userDataDir: config.userDataDir || (config.sessionId ? `./sessions/${config.sessionId}` : undefined)
+    })
+
+    // Configure crawler options
+    const crawlOptions: any = {
+      url: config.url,
+      wordCountThreshold: 10,
+      extractionStrategy: "CosineStrategy",
+      chunkingStrategy: "RegexChunking",
+      cssSelector: "body",
+      waitFor: 2000,
+      delay: 1000,
+      jsCode: [
+        "window.scrollTo(0, document.body.scrollHeight);"
+      ]
+    }
+
+    // Add proxy configuration if provided
+    if (config.proxy) {
+      crawlOptions.proxy = {
+        server: config.proxy.server,
+        username: config.proxy.username,
+        password: config.proxy.password
+      }
+    }
+
+    // Add anti-detection features if stealth mode is enabled
+    if (config.stealth) {
+      crawlOptions.extraArgs = [
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
+      ]
+      
+      // Add random delays to mimic human behavior
+      crawlOptions.delay = Math.floor(Math.random() * 2000) + 1000 // 1-3 seconds random delay
+      
+      // Add realistic user agent rotation
+      const userAgents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
+      ]
+      
+      crawlOptions.overrideUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)]
+    }
+
+    // Perform the crawl
+    const result = await crawler.arun(crawlOptions)
+
+    // Format output based on requested format
+    let formattedOutput = ""
+    switch (format) {
+      case 'markdown':
+        formattedOutput = `# Crawled Content from ${config.url}\n\n${result.markdown}`
+        break
+      case 'html':
+        formattedOutput = result.html
+        break
+      case 'json':
+        formattedOutput = JSON.stringify({
+          url: config.url,
+          success: true,
+          content: result.markdown,
+          html: result.html,
+          metadata: {
+            title: result.title,
+            description: result.description,
+            wordCount: result.markdown?.split(' ').length || 0,
+            url: config.url,
+            timestamp: new Date().toISOString()
+          },
+          links: result.links?.map((link: any) => link.url) || [],
+          images: result.images?.map((img: any) => img.src) || [],
+          crawlStats: {
+            pagesCrawled: 1,
+            totalLinks: result.links?.length || 0,
+            totalImages: result.images?.length || 0,
+            crawlTime: result.processingTime?.withinTotal || 0
+          }
+        }, null, 2)
+        break
+      default:
+        formattedOutput = result.markdown
+    }
+
+    // Clean up crawler resources (only if not using session)
+    if (!config.session) {
+      await crawler.close()
+    }
+
+    return formattedOutput
+
   } catch (error) {
     throw new Error(`Crawling failed: ${error.message}`)
   }
 }
 
-// Deep crawling function
+// Deep crawling function with real strategy implementation
 export async function deepCrawl(config: CrawlConfig): Promise<string> {
   // Validate input
   if (!config.url || !isValidUrl(config.url)) {
@@ -381,35 +688,139 @@ export async function deepCrawl(config: CrawlConfig): Promise<string> {
   const strategy = config.strategy || 'bfs'
   const keywords = config.keywords || []
 
-  // Test mode
-  if (isTestMode()) {
-    const result = await mockDeepCrawl(config.url, config)
-    return `[TEST MODE] Deep crawl results:\n\n${JSON.stringify(result, null, 2)}`
-  }
-
   try {
-    // TODO: Implement actual deep crawling with Crawl4AI strategies
-    // For now, return enhanced placeholder with strategy logic
-    let strategyDescription = ''
-    switch (strategy) {
-      case CrawlStrategy.BFS:
-        strategyDescription = 'Breadth-First Search: Explore all links at current depth before going deeper'
-        break
-      case CrawlStrategy.DFS:
-        strategyDescription = 'Depth-First Search: Follow each path completely before backtracking'
-        break
-      case CrawlStrategy.BEST_FIRST:
-        strategyDescription = 'Best-First: Prioritize pages based on keyword relevance scoring'
-        break
+    // Initialize URL filter
+    const urlFilter = new URLFilterManager({
+      includePatterns: config.includePatterns,
+      excludePatterns: config.excludePatterns,
+      includeDomains: config.includeDomains,
+      excludeDomains: config.excludeDomains
+    })
+
+    // Initialize Crawl4AI
+    const crawler = new Crawl4AI({
+      headless: true,
+      verbose: true,
+      ignoreCertificateErrors: true,
+      overrideUserAgent: config.stealth ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' : undefined
+    })
+
+    const crawledUrls = new Set<string>()
+    const urlsToCrawl = [config.url]
+    const results: any[] = []
+    let currentDepth = 0
+
+    // Implement different crawling strategies
+    while (urlsToCrawl.length > 0 && crawledUrls.size < maxPages && currentDepth < depth) {
+      let urlsToProcessThisDepth: string[]
+
+      switch (strategy) {
+        case 'bfs':
+          // Breadth-First: Process all URLs at current depth
+          urlsToProcessThisDepth = urlsToCrawl.splice(0, Math.min(urlsToCrawl.length, maxPages - crawledUrls.size))
+          break
+        case 'dfs':
+          // Depth-First: Process one URL at a time, adding its children immediately
+          urlsToProcessThisDepth = [urlsToCrawl.shift()!]
+          break
+        case 'bestfirst':
+          // Best-First: Prioritize URLs with keyword relevance
+          if (keywords.length > 0) {
+            urlsToCrawl.sort((a, b) => {
+              const scoreA = keywords.reduce((score, keyword) => 
+                score + (a.toLowerCase().includes(keyword.toLowerCase()) ? 1 : 0), 0)
+              const scoreB = keywords.reduce((score, keyword) => 
+                score + (b.toLowerCase().includes(keyword.toLowerCase()) ? 1 : 0), 0)
+              return scoreB - scoreA
+            })
+          }
+          urlsToProcessThisDepth = [urlsToCrawl.shift()!]
+          break
+        default:
+          urlsToProcessThisDepth = [urlsToCrawl.shift()!]
+      }
+
+      // Process URLs at current depth
+      for (const url of urlsToProcessThisDepth) {
+        if (crawledUrls.has(url) || crawledUrls.size >= maxPages) break
+
+        try {
+          const result = await crawler.arun({
+            url,
+            wordCountThreshold: 10,
+            extractionStrategy: "CosineStrategy",
+            chunkingStrategy: "RegexChunking",
+            waitFor: 2000,
+            delay: 1000
+          })
+
+          crawledUrls.add(url)
+          results.push({
+            url,
+            title: result.title,
+            content: result.markdown,
+            links: result.links?.map((link: any) => link.url) || [],
+            images: result.images?.map((img: any) => img.src) || [],
+            depth: currentDepth
+          })
+
+          // Add new URLs to queue for next depth (BFS) or immediate processing (DFS)
+          const newUrls = result.links
+            ?.map((link: any) => link.url)
+            .filter((url: string) => 
+              isValidUrl(url) && 
+              !crawledUrls.has(url) &&
+              (config.includeExternalLinks || new URL(url).hostname === new URL(config.url).hostname)
+            ) || []
+
+          // Apply URL filtering
+          const filteredUrls = urlFilter.filterUrls(newUrls)
+
+          if (strategy === 'dfs') {
+            // Add new URLs to front of queue for immediate processing
+            urlsToCrawl.unshift(...filteredUrls.slice(0, 5)) // Limit to prevent infinite loops
+          } else {
+            // Add new URLs to end of queue for next depth level
+            urlsToCrawl.push(...filteredUrls.slice(0, 10)) // Limit to prevent explosion
+          }
+
+        } catch (error) {
+          console.warn(`Failed to crawl ${url}: ${error.message}`)
+        }
+      }
+
+      currentDepth++
     }
 
-    return `Deep crawling ${config.url} using ${strategy.toUpperCase()} strategy\n\nStrategy: ${strategyDescription}\nDepth: ${depth}, Max pages: ${maxPages}\nKeywords: ${keywords.join(', ')}\n\nNote: This is a placeholder implementation. Full deep crawling with ${strategy} will be implemented in the next phase.`
+    // Clean up crawler resources
+    await crawler.close()
+
+    // Format results
+    const totalLinks = results.reduce((sum, r) => sum + r.links.length, 0)
+    const totalImages = results.reduce((sum, r) => sum + r.images.length, 0)
+
+    return JSON.stringify({
+      url: config.url,
+      strategy,
+      depth,
+      maxPages,
+      keywords,
+      success: true,
+      results,
+      crawlStats: {
+        pagesCrawled: results.length,
+        totalLinks,
+        totalImages,
+        crawlTime: Date.now()
+      }
+    }, null, 2)
+
   } catch (error) {
     throw new Error(`Deep crawling failed: ${error.message}`)
   }
 }
 
-// File downloading function
+// File downloading function with real implementation
 export async function downloadFiles(config: CrawlConfig & { fileTypes?: string[] }): Promise<string> {
   // Validate input
   if (!config.url || !isValidUrl(config.url)) {
@@ -420,31 +831,99 @@ export async function downloadFiles(config: CrawlConfig & { fileTypes?: string[]
   const outputDir = config.outputDir || getDefaultOutputDir()
   const maxFileSize = config.maxFileSize || 50 * 1024 * 1024 // 50MB default
 
-  // Test mode
-  if (isTestMode()) {
-    const mockFiles = [
-      { url: `${config.url}/documents/report.pdf`, size: 1024 * 1024, type: 'pdf' },
-      { url: `${config.url}/images/logo.png`, size: 256 * 1024, type: 'png' },
-      { url: `${config.url}/files/presentation.docx`, size: 5 * 1024 * 1024, type: 'docx' },
-      { url: `${config.url}/downloads/archive.zip`, size: 100 * 1024 * 1024, type: 'zip' } // Over limit
-    ].filter(file => fileTypes.includes(file.type) && file.size <= maxFileSize)
-
-    const totalSize = mockFiles.reduce((sum, file) => sum + file.size, 0)
-    
-    return `[TEST MODE] File download analysis for ${config.url}\n\nFile types: [${fileTypes.join(', ')}]\nMax file size: ${maxFileSize / (1024 * 1024)}MB\nOutput directory: ${outputDir}\n\nFiles to download (${mockFiles.length} files, ${(totalSize / (1024 * 1024)).toFixed(2)}MB):\n${mockFiles.map(f => `- ${f.url} (${(f.size / 1024).toFixed(0)}KB, ${f.type})`).join('\n')}`
-  }
-
   try {
-    // TODO: Implement actual file downloading with Crawl4AI
+    // Ensure output directory exists
     await ensureDirectoryExists(outputDir)
+
+    // Initialize Crawl4AI
+    const crawler = new Crawl4AI({
+      headless: true,
+      verbose: true,
+      ignoreCertificateErrors: true
+    })
+
+    // Crawl the page to find files
+    const result = await crawler.arun({
+      url: config.url,
+      wordCountThreshold: 0,
+      extractionStrategy: "CosineStrategy",
+      waitFor: 2000,
+      delay: 1000
+    })
+
+    const downloadedFiles: any[] = []
+    const baseUrl = new URL(config.url)
+
+    // Find and download files
+    const fileExtensions = fileTypes.map(ext => ext.toLowerCase())
     
-    return `Downloading files from ${config.url}\nFile types: ${fileTypes.join(', ')}\nMax file size: ${(maxFileSize / (1024 * 1024)).toFixed(0)}MB\nOutput directory: ${outputDir}\n\nNote: This is a placeholder implementation. Full file downloading will be implemented in the next phase.`
+    // Extract file URLs from images and links
+    const allUrls = [
+      ...(result.images?.map((img: any) => img.src) || []),
+      ...(result.links?.map((link: any) => link.url) || [])
+    ]
+
+    for (const fileUrl of allUrls) {
+      try {
+        const fullUrl = fileUrl.startsWith('http') ? fileUrl : new URL(fileUrl, baseUrl).toString()
+        const urlObj = new URL(fullUrl)
+        const extension = urlObj.pathname.split('.').pop()?.toLowerCase()
+
+        if (extension && fileExtensions.includes(extension)) {
+          // Get file headers to check size
+          const response = await fetch(fullUrl, { method: 'HEAD' })
+          const contentLength = parseInt(response.headers.get('content-length') || '0')
+
+          if (contentLength <= maxFileSize) {
+            // Download the file
+            const fileResponse = await fetch(fullUrl)
+            const buffer = await fileResponse.arrayBuffer()
+            
+            const fileName = basename(urlObj.pathname) || `file_${Date.now()}.${extension}`
+            const filePath = join(outputDir, fileName)
+            
+            await mkdir(dirname(filePath), { recursive: true })
+            await writeFile(filePath, new Uint8Array(buffer))
+
+            downloadedFiles.push({
+              url: fullUrl,
+              fileName,
+              filePath,
+              size: buffer.byteLength,
+              type: extension
+            })
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to download file ${fileUrl}: ${error.message}`)
+      }
+    }
+
+    // Clean up crawler resources
+    await crawler.close()
+
+    const totalSize = downloadedFiles.reduce((sum, file) => sum + file.size, 0)
+
+    return JSON.stringify({
+      url: config.url,
+      success: true,
+      outputDir,
+      fileTypes,
+      maxFileSize,
+      downloadedFiles,
+      downloadStats: {
+        totalFiles: downloadedFiles.length,
+        totalSize,
+        averageSize: downloadedFiles.length > 0 ? totalSize / downloadedFiles.length : 0
+      }
+    }, null, 2)
+
   } catch (error) {
     throw new Error(`File downloading failed: ${error.message}`)
   }
 }
 
-// Content analysis function
+// Content analysis function with real implementation
 export async function analyzeContent(config: CrawlConfig): Promise<string> {
   // Validate input
   if (!config.url || !isValidUrl(config.url)) {
@@ -456,53 +935,121 @@ export async function analyzeContent(config: CrawlConfig): Promise<string> {
   const extractMetadata = config.extractMetadata !== false
   const format = config.format || 'json'
 
-  // Test mode
-  if (isTestMode()) {
-    const mockAnalysis = {
+  try {
+    // Initialize Crawl4AI
+    const crawler = new Crawl4AI({
+      headless: true,
+      verbose: true,
+      ignoreCertificateErrors: true
+    })
+
+    // Crawl the page with comprehensive extraction
+    const result = await crawler.arun({
+      url: config.url,
+      wordCountThreshold: 0,
+      extractionStrategy: "CosineStrategy",
+      chunkingStrategy: "RegexChunking",
+      waitFor: 3000,
+      delay: 1000,
+      jsCode: [
+        "return { loadTime: performance.now(), pageSize: document.documentElement.outerHTML.length, requests: window.performance ? window.performance.getEntriesByType('resource').length : 0 };"
+      ]
+    })
+
+    // Perform content analysis
+    const content = result.markdown || ''
+    const words = content.split(/\s+/).filter(word => word.length > 0)
+    const wordCount = words.length
+    
+    // Simple keyword density analysis
+    const keywordDensity: { [key: string]: number } = {}
+    const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did']
+    
+    words.forEach(word => {
+      const lowerWord = word.toLowerCase().replace(/[^\w]/g, '')
+      if (lowerWord.length > 3 && !commonWords.includes(lowerWord)) {
+        keywordDensity[lowerWord] = (keywordDensity[lowerWord] || 0) + 1
+      }
+    })
+
+    // Normalize keyword density
+    Object.keys(keywordDensity).forEach(word => {
+      keywordDensity[word] = parseFloat((keywordDensity[word] / wordCount * 100).toFixed(2))
+    })
+
+    // Extract main topics (top keywords)
+    const topics = Object.entries(keywordDensity)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([word]) => word)
+
+    // Simple sentiment analysis (basic approach)
+    const positiveWords = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'love', 'best', 'awesome', 'perfect']
+    const negativeWords = ['bad', 'terrible', 'awful', 'horrible', 'hate', 'worst', 'disappointing', 'poor', 'fail', 'wrong']
+    
+    const positiveCount = words.filter(word => positiveWords.includes(word.toLowerCase())).length
+    const negativeCount = words.filter(word => negativeWords.includes(word.toLowerCase())).length
+    
+    let sentiment = 'Neutral'
+    if (positiveCount > negativeCount * 1.5) sentiment = 'Positive'
+    else if (negativeCount > positiveCount * 1.5) sentiment = 'Negative'
+
+    // Calculate readability score (simplified Flesch Reading Ease)
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0)
+    const avgWordsPerSentence = sentences.length > 0 ? wordCount / sentences.length : 0
+    const avgSyllablesPerWord = words.reduce((sum, word) => {
+      const syllables = word.toLowerCase().replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '').match(/[aeiouy]{1,2}/g)?.length || 1
+      return sum + syllables
+    }, 0) / words.length
+    
+    const readabilityScore = Math.max(0, Math.min(100, 206.835 - 1.015 * avgWordsPerSentence - 84.6 * avgSyllablesPerWord))
+
+    // Build analysis result
+    const analysis = {
       url: config.url,
       timestamp: new Date().toISOString(),
-      metadata: config.extractMetadata ? {
-        title: "Example Page Title",
-        description: "This is a mock page description for testing purposes",
-        author: "Test Author",
-        publishDate: "2024-01-15",
-        wordCount: 1250,
-        language: "en",
-        contentType: "text/html"
+      metadata: extractMetadata ? {
+        title: result.title || 'No title',
+        description: result.description || 'No description',
+        wordCount,
+        language: 'en', // Could be improved with language detection
+        contentType: 'text/html',
+        lastModified: new Date().toISOString()
       } : null,
       content: {
-        summary: "This page discusses web crawling technologies, OpenCode tools, and AI integration for automated data extraction.",
-        topics: ["Web Crawling", "OpenCode", "AI Integration", "Data Extraction", "Automation"],
-        sentiment: "Neutral",
-        readabilityScore: 7.2,
-        keywordDensity: {
-          "crawling": 3.2,
-          "opencode": 2.8,
-          "automation": 1.9
-        }
+        summary: content.substring(0, 500) + (content.length > 500 ? '...' : ''),
+        topics,
+        sentiment,
+        readabilityScore: parseFloat(readabilityScore.toFixed(1)),
+        keywordDensity
       },
-      links: config.extractLinks ? [
-        { url: `${config.url}/about`, text: "About Us", type: "internal" },
-        { url: `${config.url}/contact`, text: "Contact", type: "internal" },
-        { url: "https://external.com", text: "External Resource", type: "external" }
-      ] : null,
-      images: config.extractImages ? [
-        { src: `${config.url}/images/logo.png`, alt: "Company Logo", size: "245x80" },
-        { src: `${config.url}/images/hero.jpg`, alt: "Hero Image", size: "1200x400" }
-      ] : null,
+      links: extractLinks ? (result.links?.map((link: any) => ({
+        url: link.url,
+        text: link.text || link.url,
+        type: link.url.startsWith(config.url) ? 'internal' : 'external'
+      })) || []) : null,
+      images: extractImages ? (result.images?.map((img: any) => ({
+        src: img.src,
+        alt: img.alt || '',
+        size: `${img.width || 'unknown'}x${img.height || 'unknown'}`
+      })) || []) : null,
       performance: {
-        loadTime: "1.2s",
-        pageSize: "2.3MB",
-        requests: 24
+        loadTime: `${(result.processingTime?.withinTotal || 0)}ms`,
+        pageSize: `${(content.length / 1024).toFixed(1)}KB`,
+        requests: result.links?.length || 0
       }
     }
-    
-    return `[TEST MODE] Content analysis for ${config.url}\n\n${config.format === 'json' ? JSON.stringify(mockAnalysis, null, 2) : `# Content Analysis Report\n\n${JSON.stringify(mockAnalysis, null, 2)}`}`
-  }
 
-  try {
-    // TODO: Implement actual content analysis with Crawl4AI
-    return `Analyzing content from ${config.url}\n\nExtract options:\n- Images: ${config.extractImages}\n- Links: ${config.extractLinks}\n- Metadata: ${config.extractMetadata}\n- Format: ${config.format}\n\nNote: This is a placeholder implementation. Full content analysis will be implemented in the next phase.`
+    // Clean up crawler resources
+    await crawler.close()
+
+    // Format output
+    if (format === 'json') {
+      return JSON.stringify(analysis, null, 2)
+    } else {
+      return `# Content Analysis Report for ${config.url}\n\n${JSON.stringify(analysis, null, 2)}`
+    }
+
   } catch (error) {
     throw new Error(`Content analysis failed: ${error.message}`)
   }

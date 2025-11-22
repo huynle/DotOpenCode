@@ -32,3 +32,14 @@ export {
   checkAccessibility, // Check if URL is accessible
   default as urlValidator  // Default export (validate tool)
 } from "./url-validator"
+
+// Crawl4AI web crawling and content extraction tools
+export {
+  crawl,              // Main web crawling function
+  deepCrawlTool,      // Deep crawling with multiple strategies
+  download,           // File downloading from websites
+  analyze as analyzeContent,  // Content analysis and structured data extraction
+  URLFilterManager,   // URL filtering utilities
+  ContentScorer,      // Content relevance scoring utilities
+  default as crawl4ai // Default export (crawl tool)
+} from "./crawl4ai"
