@@ -39,6 +39,26 @@
 - [x] Test with multiple concurrent config directories
 - [x] Verify tool isolation and no cross-contamination between configs
 
+### Phase 7: Real CLI Testing Enforcement
+- [x] Update validator subagent to REQUIRE actual `opencode` CLI execution with `OPENCODE_CONFIG_DIR`
+- [x] Add validation checks to ensure real CLI commands are being executed, not simulations
+- [x] Update all test commands to use `OPENCODE_CONFIG_DIR=/path/to/config opencode run` format
+- [x] Document the CLI testing requirements in validator documentation
+
+### Phase 8: Tool Export Registration
+- [x] Update tooling agent to automatically add exports to `@opencode/tool/index.ts`
+- [x] Create export registration templates for different tool types
+- [x] Add validation step to verify tool exports are present and correct
+- [x] Test tool accessibility after export registration
+- [x] Update documentation with export registration examples
+
+### Phase 9: File Structure Enforcement
+- [x] Document file structure constraints in `@opencode/tool/README.md`
+- [x] Add validation checks to detect test files in `@opencode/tool/` directory
+- [x] Create warnings when non-production files are detected in tool directories
+- [x] Update tooling agent documentation to emphasize production-only code requirement
+- [x] Add examples of correct tool directory structure with tests placed separately
+
 ## Dependencies
 - Requires understanding of current `@opencode/` symlink structure
 - Needs testing with actual git worktree setup
@@ -50,3 +70,7 @@
 - Proper error handling for invalid config directories
 - Clear documentation and examples provided
 - All existing validation tests still pass
+- **NEW**: Real `opencode` CLI commands are executed with `OPENCODE_CONFIG_DIR` set
+- **NEW**: Tools are properly exported in `@opencode/tool/index.ts` and accessible
+- **NEW**: File structure constraints are documented and enforced
+- **NEW**: No test or mock code exists within `@opencode/tool/` directories

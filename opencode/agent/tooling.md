@@ -231,7 +231,8 @@ openspec validate <tool-name>
 - **Architecture**: Modular, scalable, maintainable design
 - **Error Handling**: Graceful degradation with string returns
 - **OpenSpec Compliance**: Build tools exactly as specified in approved OpenSpec requirements
-- **Testing**: Comprehensive test coverage with OpenSpec validation
+- **CRITICAL: Production-Only Code**: `@opencode/tool/` MUST only contain production code (NO test files)
+- **Testing**: Comprehensive test coverage with OpenSpec validation (place tests OUTSIDE @opencode/tool/)
 
 #### OpenSpec Tool Creation Process
 1. **Proposal Creation**: Create openspec/changes/<tool-name>/ using OpenSpec CLI
@@ -261,12 +262,64 @@ openspec validate <tool-name>
 - **Integration**: Seamless CLI integration
 - **Help System**: Comprehensive documentation and examples
 
+### File Structure Requirements (CRITICAL)
+
+**MANDATORY**: The `@opencode/tool/` directory MUST only contain production-ready code.
+
+#### What MUST NOT Be in @opencode/tool/
+
+❌ **Test Files**: `*.test.ts`, `*.spec.ts`, `*_test.ts`
+❌ **Mock Files**: `*.mock.ts`, `*_mock.ts`
+❌ **Test Directories**: `tests/`, `__tests__/`, `__mocks__/`
+❌ **Test Utilities**: `test-helpers.ts`, `test-utils.ts`
+❌ **Development Files**: `*.dev.ts`, `*.local.ts`
+❌ **Example Files**: `example.ts`, `demo.ts`
+
+#### Why This Matters
+
+OpenCode reads ALL TypeScript files in `@opencode/tool/` during startup. Test files will:
+- Slow down startup (extra parsing)
+- Cause import errors (test frameworks not in production)
+- Pollute tool namespace
+- Increase memory usage
+
+#### Correct Structure
+
+```
+@opencode/tool/
+├── index.ts              # ✅ Main exports
+├── my-tool/
+│   └── index.ts          # ✅ Production code only
+└── another-tool/
+    └── index.ts          # ✅ Production code only
+
+@opencode/tool/tests/     # ✅ Tests in separate directory
+├── my-tool.test.ts
+└── another-tool.test.ts
+
+# OR outside @opencode/ entirely
+tests/opencode/tool/
+├── my-tool.test.ts
+└── another-tool.test.ts
+```
+
+#### Validation
+
+The tooling agent will:
+1. Scan tool directories for test files
+2. Issue warnings if test files detected
+3. Recommend moving tests to appropriate location
+4. Document violations in validation report
+
+See `@opencode/tool/README.md` for complete file structure documentation.
+
 ### Best Practices
 - **Tools**: Import from `@opencode-ai/plugin/tool`, re-export in main index.ts
 - **Agents**: Markdown with YAML frontmatter, clear descriptions
 - **Commands**: Markdown with frontmatter, template syntax
 - **Naming**: kebab-case for files, clear and descriptive
 - **Scope**: Single-purpose tools, domain-specialized agents
+- **File Structure**: Keep production code separate from tests (CRITICAL)
 
 ### Phase 2: OpenSpec Implementation & Validation
 
@@ -677,20 +730,82 @@ References:
 
 ---
 
-## Current Tool Structure
+## Current Tool Structure (Production-Only)
+
+**CRITICAL**: Only production code belongs in `@opencode/tool/`. All tests go elsewhere.
+
+### Correct Structure with Tests Separated
 
 ```
-.opencode/tool/
-├── index.ts              # Main entry point - re-exports all tools
-├── package.json          # Dependencies for all tools
-├── tsconfig.json         # TypeScript configuration
-├── gemini/               # Tool subdirectory
-│   └── index.ts          # Gemini tool definitions
-├── template/             # Template for new tools
-│   └── index.ts          # Example tool implementation
-└── [newtool]/            # Your new tool directory
-    └── index.ts          # Your tool definitions
+@opencode/
+├── tool/                 # ✅ PRODUCTION CODE ONLY
+│   ├── index.ts          # Main entry point - re-exports all tools
+│   ├── package.json      # Dependencies for all tools
+│   ├── tsconfig.json     # TypeScript configuration
+│   ├── README.md         # Documentation and file structure constraints
+│   │
+│   ├── gemini/           # Tool subdirectory
+│   │   └── index.ts      # ✅ Tool implementation (production only)
+│   │
+│   ├── env/              # Tool subdirectory
+│   │   └── index.ts      # ✅ Tool implementation (production only)
+│   │
+│   └── url-validator/    # Tool subdirectory
+│       └── index.ts      # ✅ Tool implementation (production only)
+│
+├── tool/tests/           # ✅ Tests in separate directory
+│   ├── gemini.test.ts
+│   ├── env.test.ts
+│   └── url-validator.test.ts
+│
+└── agent/                # Agents directory
+    └── tooling.md
+
+# Alternative: Tests completely outside @opencode/
+tests/
+└── opencode/
+    └── tool/
+        ├── gemini.test.ts
+        ├── env.test.ts
+        └── url-validator.test.ts
 ```
+
+### WRONG Structure (DO NOT DO THIS)
+
+```
+@opencode/tool/
+├── index.ts
+├── gemini/
+│   ├── index.ts          # ✅ Production code
+│   ├── index.test.ts     # ❌ WRONG: Test in production directory
+│   └── __tests__/        # ❌ WRONG: Test directory in production
+│       └── gemini.test.ts
+└── env/
+    ├── index.ts          # ✅ Production code
+    └── env.mock.ts       # ❌ WRONG: Mock in production directory
+```
+
+### Why Separation Matters
+
+**OpenCode Startup Process:**
+1. OpenCode reads `@opencode/tool/index.ts`
+2. Loads ALL `*.ts` files in subdirectories
+3. Parses and registers each tool
+4. **Problem**: Test files get loaded as if they were tools!
+
+**Impact of Test Files in Production:**
+- ❌ Slower startup (parsing unnecessary files)
+- ❌ Import errors (test frameworks not available)
+- ❌ Namespace pollution (test exports conflict)
+- ❌ Memory waste (test code loaded unnecessarily)
+- ❌ Potential runtime errors
+
+**Benefits of Proper Separation:**
+- ✅ Fast OpenCode startup
+- ✅ Clean tool namespace
+- ✅ No test framework dependencies in production
+- ✅ Clear separation of concerns
+- ✅ Easy to maintain and debug
 
 **Main index.ts structure:**
 ```typescript
@@ -752,31 +867,132 @@ export default generate
 - [ ] Implement execute() function returning strings
 - [ ] Add error handling with string error messages
 - [ ] If multiple tools: use short export names (avoid double-prefixing)
-- [ ] Update main `index.ts` to re-export from subdirectory
+- [ ] **CRITICAL**: Update main `index.ts` to export new tool (Tool Export Registration)
 
-### Step 3: Dependencies
+### Step 3: Tool Export Registration (CRITICAL)
+**MANDATORY**: All newly created tools MUST be registered in `@opencode/tool/index.ts` to be accessible.
+
+#### Export Registration Process
+1. **Open main index.ts**: `@opencode/tool/index.ts`
+2. **Add export statement**: Following the existing pattern
+3. **Verify export**: Tool appears in OpenCode's tool list
+
+#### Export Templates
+
+**Single Tool Export:**
+```typescript
+// Add to @opencode/tool/index.ts
+export {
+  toolname,           // Main tool export
+  default as toolname // Optional: default export
+} from "./toolname"
+```
+
+**Multiple Tool Exports:**
+```typescript
+// Add to @opencode/tool/index.ts
+export {
+  feature1,           // toolname_feature1
+  feature2,           // toolname_feature2
+  feature3,           // toolname_feature3
+  default as toolname // Optional: default export
+} from "./toolname"
+```
+
+**With Documentation Comments:**
+```typescript
+// Add to @opencode/tool/index.ts
+export {
+  generate,           // Generate new content
+  analyze,            // Analyze existing content
+  validate,           // Validate content format
+  default as toolname // Default export
+} from "./toolname"
+```
+
+#### Example: Complete Export Registration
+
+**Scenario**: Created new tool at `@opencode/tool/github/index.ts` with exports: `fetch`, `search`, `issues`
+
+**Before (missing registration):**
+```typescript
+// @opencode/tool/index.ts
+export {
+  generate,
+  edit,
+  analyze,
+  default as gemini
+} from "./gemini"
+
+// New tool NOT exported - will be inaccessible!
+```
+
+**After (proper registration):**
+```typescript
+// @opencode/tool/index.ts
+export {
+  generate,
+  edit,
+  analyze,
+  default as gemini
+} from "./gemini"
+
+// New tool exported - now accessible as github_fetch, github_search, github_issues
+export {
+  fetch,              // GitHub repository fetching
+  search,             // GitHub code search
+  issues,             // GitHub issue management
+  default as github   // Default: fetch tool
+} from "./github"
+```
+
+#### Verification Checklist
+- [ ] Export statement added to `@opencode/tool/index.ts`
+- [ ] Export follows existing code style and formatting
+- [ ] Comments describe what each export does
+- [ ] Tool names follow conventions (no double-prefixing in exports)
+- [ ] Default export provided (if applicable)
+- [ ] File saved and changes committed
+
+#### Why This Matters
+- **Tool Discovery**: OpenCode reads `@opencode/tool/index.ts` to discover available tools
+- **Accessibility**: Unregistered tools will not be available to agents
+- **Validation**: Export registration is verified during validation phase
+- **Production Ready**: Tools must be properly exported before deployment
+
+### Step 4: Dependencies
 - [ ] Add dependencies to `~/.config/opencode/package.json`
 - [ ] Run `bun install` or `npm install`
 - [ ] Verify external services are running (if needed)
 
-### Step 4: Validation (CRITICAL - DO NOT SKIP)
+### Step 5: Validation (CRITICAL - DO NOT SKIP)
 
 **Use specialized subagents for faster validation:**
 
-#### Step 4a: Static Analysis
+#### Step 5a: Export Verification (NEW - MANDATORY)
+- [ ] Verify tool exports are present in `@opencode/tool/index.ts`
+- [ ] Confirm export statements follow proper conventions
+- [ ] Check that export names match tool implementation
+- [ ] Verify no double-prefixing in export names
+- [ ] Test tool discovery: `OPENCODE_CONFIG_DIR="..." opencode run "What tools do you have?" --agent general`
+
+#### Step 5b: Static Analysis
 - [ ] Invoke @subagents/tooling/analyzer to check code structure
 - [ ] Review analysis report for critical issues
 - [ ] Fix any issues found (return types, naming, etc.)
 - [ ] Verify all critical issues resolved
+- [ ] **NEW**: Verify export registration is correct
 
-#### Step 4b: CLI Testing
+#### Step 5c: CLI Testing
 - [ ] Detect OpenCode config directory using environment detection function
 - [ ] Invoke @subagents/tooling/validator for automated testing with config directory
 - [ ] Review validation report for test results
+- [ ] **NEW**: Verify tool is accessible through exports
 - [ ] Fix any failures
 - [ ] Verify all tests pass with correct config directory
 
 **Manual checklist (if not using subagents):**
+- [ ] Verify tool exports in main index.ts (MANDATORY)
 - [ ] Run static checks (file location, imports, exports)
 - [ ] Test with `opencode run` CLI (basic functionality)
 - [ ] Test with various parameters
@@ -786,7 +1002,7 @@ export default generate
 - [ ] Test all exported tools (if multiple)
 - [ ] Document validation results
 
-### Step 5: Documentation
+### Step 6: Documentation
 - [ ] Invoke @subagents/tooling/documenter to generate documentation
 - [ ] Review generated README.md
 - [ ] Review validation report
@@ -799,11 +1015,12 @@ export default generate
 - [ ] Provide troubleshooting guide
 - [ ] Include example CLI commands
 
-### Step 6: Integration
+### Step 7: Integration
 - [ ] Configure agent to use tool (if needed)
 - [ ] Test with `opencode tui`
 - [ ] Verify in real-world scenarios
 - [ ] Update agent documentation
+- [ ] Confirm tool exports are working in production
 
 ## Real-World Example: crawl4ai Tool
 
@@ -873,12 +1090,14 @@ Before declaring a tool complete, verify:
 
 - ✅ Directory at `~/.config/opencode/tool/<name>/`
 - ✅ File at `~/.config/opencode/tool/<name>/index.ts`
+- ✅ **CRITICAL: Tool exported in main `@opencode/tool/index.ts`** (NEW)
+- ✅ Export statement follows proper conventions
 - ✅ Main index.ts re-exports from subdirectory
 - ✅ Dependencies in parent `package.json` and installed
 - ✅ All execute() functions return strings
 - ✅ Export names follow conventions (no double-prefixing)
-- ✅ Tested with `opencode run` CLI
-- ✅ Tool appears in agent's available tools
+- ✅ Tested with `opencode run` CLI using OPENCODE_CONFIG_DIR
+- ✅ Tool appears in agent's available tools (verified with real CLI)
 - ✅ No "expected string, received object" errors
 - ✅ Error handling returns string messages
 - ✅ External services running (if needed)

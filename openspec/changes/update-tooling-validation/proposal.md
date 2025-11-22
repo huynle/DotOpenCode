@@ -14,6 +14,9 @@ Update the tooling agent and validator subagent to:
 2. **Config Directory Resolution**: Use the detected config directory or fallback to current `@opencode/` folder
 3. **CLI Command Updates**: Modify all `opencode run` commands to use the appropriate config directory
 4. **Path Resolution**: Update tool location detection to work with custom config directories
+5. **Real CLI Testing**: **ENFORCE** actual usage of `opencode` CLI tool with `OPENCODE_CONFIG_DIR` environment variable for validation
+6. **Tool Export Registration**: Update `@opencode/tool/index.ts` to export new tools, making them accessible through OpenCode
+7. **File Structure Enforcement**: Document and enforce that `@opencode/tool/` must only contain production-ready code (no tests, mocks, or non-production files)
 
 ## Impact
 - **Positive**: Ensures tools are tested against the correct configuration during development
@@ -25,11 +28,13 @@ Update the tooling agent and validator subagent to:
 ## Scope
 This change affects:
 - `opencode/agent/tooling.md` - Main tooling agent validation workflow
-- `opencode/agent/subagents/tooling/validator.md` - CLI validation commands
+- `opencode/agent/subagents/tooling/validator.md` - CLI validation commands and real CLI testing enforcement
+- `opencode/tool/index.ts` - Tool export registration for OpenCode accessibility
+- `opencode/tool/README.md` - Documentation of file structure constraints
 - Validation test commands and environment setup
 
 The change does not affect:
-- Tool creation process
+- Tool creation process (except export registration step)
 - Tool implementation
 - Other subagents (analyzer, documenter)
 - OpenCode CLI functionality
