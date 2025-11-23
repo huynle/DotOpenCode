@@ -1,0 +1,61 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                  SMART_CRAWL - QUICK REFERENCE                       ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+INSTALLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pip install -r requirements.txt && playwright install
+
+BASIC USAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{ url: "https://example.com" }
+
+CHROME PROFILE (RECOMMENDED) ⭐
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  url: "https://linkedin.com/in/profile",
+  use_chrome: true,
+  chrome_profile: "Default"
+}
+
+STRUCTURED EXTRACTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  url: "https://github.com/user/repo",
+  css_schema: JSON.stringify({
+    name: "h1 strong a",
+    stars: "#repo-stars-counter-star"
+  })
+}
+
+DEEP CRAWL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{ url: "https://docs.example.com", depth: 2 }
+
+FIND CHROME PROFILE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+macOS:    ls ~/Library/Application\ Support/Google/Chrome/
+Windows:  dir %LOCALAPPDATA%\Google\Chrome\User Data\
+Linux:    ls ~/.config/google-chrome/
+
+PARAMETERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+url            (required)  Target URL
+use_chrome     (optional)  Use Chrome profile
+chrome_profile (optional)  Profile name (default: "Default")
+headless       (optional)  Run invisibly (default: true)
+depth          (optional)  Crawl depth (default: 0)
+css_schema     (optional)  CSS selectors for extraction
+
+IMPORTANT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Close Chrome before running (profile lock)
+✓ Login to sites in Chrome first
+✓ Use headless: false for debugging
+✓ Chrome Profile > Cookie Files
+
+DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUICK_START_SMART_CRAWL.md
+opencode/tool/SMART_CRAWL_README.md
+opencode/tool/CHROME_PROFILE_VS_COOKIES.md

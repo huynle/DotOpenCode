@@ -418,6 +418,22 @@
         ],
         "dependencies": [],
         "category": "essential"
+      },
+      {
+        "id": "crawl4ai",
+        "name": "Crawl4AI Web Crawling",
+        "type": "tool",
+        "path": ".opencode/tool/crawl4ai/index.ts",
+        "description": "Advanced web crawling with Crawl4AI integration, supporting multiple strategies, content extraction, and file downloading",
+        "tags": [
+          "web-crawling",
+          "data-extraction",
+          "automation",
+          "crawl4ai",
+          "browser-automation"
+        ],
+        "dependencies": [],
+        "category": "standard"
       }
     ],
     "plugins": [
@@ -823,7 +839,7 @@
     }
   },
   "metadata": {
-    "lastUpdated": "2025-11-19",
+    "lastUpdated": "2025-11-21",
     "schemaVersion": "1.0.0"
   }
 }
