@@ -1,4 +1,4 @@
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@opencode-ai/plugin/tool"
 
 export default tool({
   description: "Advanced web crawler. Can crawl single pages, deeply crawl a site, or extract specific data using schemas. Supports authenticated crawling if cookies are provided.",
@@ -10,8 +10,8 @@ export default tool({
   },
   async execute(args) {
     // We pass arguments as a single JSON string to avoid command line parsing issues
-    const jsonArgs = JSON.stringify(args).replace(/"/g, '\\"'); 
-    const result = await Bun.$`python3 .opencode/tool/smart_crawl.py "${jsonArgs}"`.text()
+    const jsonArgs = JSON.stringify(args)
+    const result = await Bun.$`python3 ${import.meta.dir}/index.py ${jsonArgs}`.text()
     return result.trim()
   },
 })

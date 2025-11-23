@@ -35,10 +35,6 @@ export {
 
 // Crawl4AI web crawling and content extraction tools
 export {
-  crawl,              // Main web crawling function
-  firstLink,          // Get first link from search query
-  analyze as analyzeWeb,  // Content analysis and structured data extraction
-  crawlUrl,           // Core crawling function
   default as crawl4ai // Default export (crawl tool)
 } from "./crawl4ai"
 
