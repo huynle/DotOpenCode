@@ -33,7 +33,7 @@ async def main():
 
     # 2. Setup Run Configuration
     run_conf_args = {
-        "cache_mode": CacheMode.BYPASS, # Always get fresh data
+        "cache_mode": CacheMode.BYPASS,  # Always get fresh data
     }
 
     # 3. Handle Authentication (The "Spy" Mode)
@@ -62,25 +62,33 @@ async def main():
     # Execute
     try:
         async with AsyncWebCrawler(config=browser_conf) as crawler:
-            config = CrawlerRunConfig(**run_conf_args)
-            result_container = await crawler.arun(url=url, config=config)
+            config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
+            result_container = await crawler.arun(url=url, crawler_config=config)
             
-            # Iterate the container to get the actual result
-            for result in result_container:
-                if result.success:
-                    # Return the markdown content
-                    output = result.markdown or result.html
-                    print(json.dumps({
-                        "url": result.url,
-                        "status_code": result.status_code,
-                        "content": output[:50000] if output else ""  # Truncate massive results
-                    }))
-                else:
-                    print(json.dumps({
-                        "error": result.error_message or "Unknown error",
-                        "url": url
-                    }))
-                break  # Only process first result
+            # Get the first result from the container
+            result = None
+            for r in result_container:
+                result = r
+                break
+                
+            if result and result.success:
+                # Return the markdown content
+                output = result.markdown or result.html
+                print(json.dumps({
+                    "url": result.url,
+                    "status_code": result.status_code,
+                    "content": output[:50000] if output else ""  # Truncate massive results
+                }))
+            elif result:
+                print(json.dumps({
+                    "error": result.error_message or "Unknown error",
+                    "url": url
+                }))
+            else:
+                print(json.dumps({
+                    "error": "No result returned from crawler",
+                    "url": url
+                }))
                 
     except Exception as e:
         print(json.dumps({
