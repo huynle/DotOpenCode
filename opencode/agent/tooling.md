@@ -1126,7 +1126,7 @@ See `@opencode/tool/README.md` for complete file structure documentation.
 - **TOOLS**: Atomic, single-purpose functions with concise output
 - **SUBAGENTS**: Specialized multi-step workflows with domain expertise
 - **COMMANDS**: Template shortcuts with specific context
-- **PRIMARY AGENTS**: Orchestration agents (build, plan, general, tooling)
+- **PRIMARY AGENTS**: Orchestration agents (build, plan, tooling)
 
 ### Tool Development Patterns
 - **Modular Architecture**: Separation of concerns, reusable components
@@ -1722,7 +1722,7 @@ export {
 - [ ] Confirm export statements follow proper conventions
 - [ ] Check that export names match tool implementation
 - [ ] Verify no double-prefixing in export names
-- [ ] Test tool discovery: `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What tools do you have?" --agent general`
+- [ ] Test tool discovery: `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What tools do you have?" --agent build`
 
 #### Step 5b: Static Analysis
 - [ ] Invoke @subagents/tooling/analyzer to check code structure
@@ -2173,7 +2173,7 @@ Tooling Agent:
    [Adds description to parameter]
 
 5. CLI Testing...
-   @subagents/tooling/validator Please validate the github tool with the general agent.
+   @subagents/tooling/validator Please validate the github tool with the build agent.
 
    tool-validator:
    ✅ Test 1: Tool Discovery - PASS
