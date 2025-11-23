@@ -36,10 +36,8 @@ export {
 // Crawl4AI web crawling and content extraction tools
 export {
   crawl,              // Main web crawling function
-  deepCrawlTool,      // Deep crawling with multiple strategies
-  download,           // File downloading from websites
-  analyze as analyzeContent,  // Content analysis and structured data extraction
-  URLFilterManager,   // URL filtering utilities
-  ContentScorer,      // Content relevance scoring utilities
+  firstLink,          // Get first link from search query
+  analyze as analyzeWeb,  // Content analysis and structured data extraction
+  crawlUrl,           // Core crawling function
   default as crawl4ai // Default export (crawl tool)
 } from "./crawl4ai"

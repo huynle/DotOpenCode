@@ -4,21 +4,21 @@
   "permission": {
     "external_directory": "ask"
   },
-  "provider": {
-    "aifactory": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "AI Factory",
-      "options": {
-        "baseURL": "https://api.ai.us.lmco.com/v1",
-        "apiKey": "{env:LM_LLM_TOKEN}",
-      },
-      "models": {
-        "llama-3.3-70b-instruct": {
-          "name": "Llama 3.3 70b Instruct",
-        },
-      },
-    },
-  },
+  // "provider": {
+  //   "aifactory": {
+  //     "npm": "@ai-sdk/openai-compatible",
+  //     "name": "AI Factory",
+  //     "options": {
+  //       "baseURL": "https://api.ai.us.lmco.com/v1",
+  //       "apiKey": "{env:LM_LLM_TOKEN}",
+  //     },
+  //     "models": {
+  //       "llama-3.3-70b-instruct": {
+  //         "name": "Llama 3.3 70b Instruct",
+  //       },
+  //     },
+  //   },
+  // },
   "tui": {
     "scroll_speed": 3,
     "scroll_acceleration": {

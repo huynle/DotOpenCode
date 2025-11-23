@@ -2,6 +2,7 @@
   "dependencies": {
     "@opencode-ai/plugin": "1.0.85",
     "@types/node": "^24.10.1",
-    "crawl4ai": "^1.0.1"
+    "crawl4ai": "^1.0.1",
+    "playwright": "^1.56.1"
   }
 }

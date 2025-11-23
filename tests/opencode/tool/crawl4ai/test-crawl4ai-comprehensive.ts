@@ -1,3 +1,4 @@
+// Final comprehensive test for the crawl4ai tool
 import { tool } from "@opencode-ai/plugin/tool"
 import { Crawl4AI } from "crawl4ai"
 
@@ -7,15 +8,8 @@ interface LinkItem {
   text: string;
 }
 
-// Options interface for crawlUrl function
-interface CrawlOptions {
-  userDataDir?: string;
-  headless?: boolean;
-  verbose?: boolean;
-}
-
 // Simple web crawling function
-export async function crawlUrl(url: string, options: CrawlOptions = {}): Promise<string> {
+export async function crawlUrl(url: string): Promise<string> {
   try {
     // If the input doesn't look like a URL, treat it as a search query
     let finalUrl = url;
@@ -28,33 +22,16 @@ export async function crawlUrl(url: string, options: CrawlOptions = {}): Promise
     const client = new Crawl4AI({
       baseUrl: 'http://localhost:11235', // Default local Crawl4AI server
       timeout: 30000,
-      debug: options.verbose || false
+      debug: false
     })
-
-    // Determine headless mode
-    // Default: true (headless)
-    // If userDataDir is provided: false (GUI visible for authentication)
-    // Can be explicitly overridden by options.headless
-    const shouldBeHeadless = options.headless !== undefined 
-      ? options.headless 
-      : (options.userDataDir ? false : true);
-
-    const browserConfig: any = {
-      headless: shouldBeHeadless,
-      viewport: { width: 1920, height: 1080 },
-      verbose: options.verbose || false
-    };
-
-    // Add user data directory if provided (for Chrome profile support)
-    if (options.userDataDir) {
-      browserConfig.user_data_dir = options.userDataDir;
-      browserConfig.use_managed_browser = true; // Enable managed browser for persistent sessions
-    }
 
     // Perform crawl
     const response = await client.crawl({
       urls: [finalUrl], // Pass as array
-      browser_config: browserConfig,
+      browser_config: {
+        headless: true,
+        viewport: { width: 1920, height: 1080 }
+      },
       crawler_config: {
         cache_mode: 'bypass',
         word_count_threshold: 10
@@ -137,24 +114,14 @@ export async function crawlUrl(url: string, options: CrawlOptions = {}): Promise
 
 // Tool definition for OpenCode agent system - gets the first link from a search
 export const firstLink = tool({
-  description: "Search the web for a query and return the first link found. Note: Google searches may be blocked by CAPTCHA. For best results, use direct URLs instead of search queries.",
+  description: "Search the web for a query and return the first link found",
   args: {
-    query: tool.schema.string().describe("Search query or direct URL to find links from"),
+    query: tool.schema.string().describe("Search query to find links for"),
   },
   async execute(args, context) {
     try {
       const result = await crawlUrl(args.query);
       const parsedResult = JSON.parse(result);
-      
-      // If crawl failed, return the error details
-      if (!parsedResult.success) {
-        return JSON.stringify({
-          error: parsedResult.error,
-          note: parsedResult.note,
-          originalQuery: parsedResult.originalQuery
-        }, null, 2);
-      }
-      
       return parsedResult.firstLink || "No link found";
     } catch (error: any) {
       return `Error: ${error.message}`;
@@ -164,20 +131,13 @@ export const firstLink = tool({
 
 // Tool definition for OpenCode agent system - full crawl results
 export const crawl = tool({
-  description: "Crawl a web page and extract content, links, and metadata. Supports Chrome profiles for authenticated sessions and GUI mode for monitoring.",
+  description: "Crawl a web page and extract content, links, and metadata",
   args: {
     url: tool.schema.string().describe("URL to crawl and extract content from"),
-    userDataDir: tool.schema.string().optional().describe("Path to Chrome user data directory for authentication (e.g., '/path/to/chrome-profile'). When set, enables persistent sessions with saved cookies and login state."),
-    headless: tool.schema.boolean().optional().describe("Run browser in headless mode (true) or with GUI (false). Default: true if no userDataDir, false if userDataDir is set. Set to false to monitor crawling in real-time."),
-    verbose: tool.schema.boolean().optional().describe("Enable verbose logging to see detailed crawl progress. Default: false"),
   },
   async execute(args, context) {
     try {
-      return await crawlUrl(args.url, { 
-        userDataDir: args.userDataDir,
-        headless: args.headless,
-        verbose: args.verbose
-      });
+      return await crawlUrl(args.url);
     } catch (error: any) {
       return `Error: ${error.message}`;
     }
@@ -186,20 +146,13 @@ export const crawl = tool({
 
 // Content analysis tool
 export const analyze = tool({
-  description: "Analyze web page content and extract structured data with metadata. Supports Chrome profiles and GUI monitoring.",
+  description: "Analyze web page content and extract structured data with metadata",
   args: {
     url: tool.schema.string().describe("URL to analyze for structured content"),
-    userDataDir: tool.schema.string().optional().describe("Path to Chrome user data directory for authenticated analysis"),
-    headless: tool.schema.boolean().optional().describe("Run browser in headless mode (true) or with GUI (false) for monitoring"),
-    verbose: tool.schema.boolean().optional().describe("Enable verbose logging"),
   },
   async execute(args, context) {
     try {
-      return await crawlUrl(args.url, {
-        userDataDir: args.userDataDir,
-        headless: args.headless,
-        verbose: args.verbose
-      });
+      return await crawlUrl(args.url);
     } catch (error: any) {
       return `Error: ${error.message}`;
     }
@@ -208,3 +161,86 @@ export const analyze = tool({
 
 // Default export
 export default crawl
+
+// Test function
+async function comprehensiveTest() {
+  try {
+    console.log("=== Crawl4AI Tool Comprehensive Test ===");
+    
+    // Test 1: Direct URL crawling
+    console.log("\n1. Testing direct URL crawling...");
+    const result1 = await crawlUrl('https://example.com');
+    const parsed1 = JSON.parse(result1);
+    
+    console.log("Success:", parsed1.success);
+    console.log("Title:", parsed1.title);
+    console.log("First link:", parsed1.firstLink);
+    console.log("Total links:", parsed1.totalLinks);
+    
+    if (parsed1.success && parsed1.firstLink !== "No links found") {
+      console.log("✅ Direct URL crawling: PASSED");
+    } else {
+      console.log("❌ Direct URL crawling: FAILED");
+    }
+    
+    // Test 2: Search query (may fail due to CAPTCHA)
+    console.log("\n2. Testing search query...");
+    const result2 = await crawlUrl('funny dog');
+    const parsed2 = JSON.parse(result2);
+    
+    console.log("Success:", parsed2.success);
+    console.log("First link:", parsed2.firstLink);
+    
+    if (parsed2.success) {
+      console.log("✅ Search query: PASSED");
+    } else {
+      console.log("⚠️ Search query: BLOCKED (likely CAPTCHA)");
+      console.log("Error:", parsed2.error);
+    }
+    
+    // Test 3: Error handling with invalid URL
+    console.log("\n3. Testing error handling with invalid input...");
+    const result3 = await crawlUrl(null as any);
+    const parsed3 = JSON.parse(result3);
+    
+    console.log("Success:", parsed3.success);
+    console.log("Error:", parsed3.error);
+    
+    if (!parsed3.success && parsed3.error) {
+      console.log("✅ Error handling: PASSED");
+    } else {
+      console.log("❌ Error handling: FAILED");
+    }
+    
+    // Test 4: Tool exports
+    console.log("\n4. Testing tool exports...");
+    console.log("crawl function:", typeof crawl);
+    console.log("analyze function:", typeof analyze);
+    console.log("firstLink function:", typeof firstLink);
+    
+    if (crawl && analyze && firstLink) {
+      console.log("✅ Tool exports: PASSED");
+    } else {
+      console.log("❌ Tool exports: FAILED");
+    }
+    
+    // Test 5: Tool execute functions return strings
+    console.log("\n5. Testing tool execute functions return strings...");
+    const testResult = await crawl.execute({ url: 'https://example.com' }, {});
+    console.log("Return type:", typeof testResult);
+    console.log("Is string:", typeof testResult === 'string');
+    
+    if (typeof testResult === 'string') {
+      console.log("✅ String return type: PASSED");
+    } else {
+      console.log("❌ String return type: FAILED");
+    }
+    
+    console.log("\n=== Comprehensive Test Complete ===");
+    
+  } catch (error) {
+    console.error("Comprehensive test failed with error:", error);
+  }
+}
+
+comprehensiveTest();

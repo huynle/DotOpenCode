@@ -1,480 +1,261 @@
-# Crawl4AI Tool for OpenCode
+# Crawl4AI Tool
 
-A comprehensive web crawling tool that enables OpenCode users to perform web research, content extraction, and data collection with advanced crawling capabilities using the real Crawl4AI library.
+Advanced web crawling and content extraction tool powered by Crawl4AI, with support for authenticated sessions and GUI monitoring.
 
-## 🚀 Features
+## Features
 
-### Simple Crawling
-- **Real web crawling** with Crawl4AI library integration
-- **Multiple output formats** (markdown, HTML, JSON)
-- **Link and media resource discovery**
-- **Error handling and validation** with exponential backoff
-- **Session persistence** for authenticated content
-- **Robots.txt compliance** checking
+- **Web Crawling**: Extract content, links, and metadata from any web page
+- **Chrome Profile Support**: Use your Chrome profile for authenticated sessions
+- **GUI Monitoring**: Watch the crawling process in real-time
+- **Verbose Logging**: Detailed progress tracking
+- **Smart Search**: Automatically converts search queries to Google searches
+- **Link Extraction**: Get first link or all links from pages
 
-### Deep Crawling
-- **Multiple crawling strategies** (BFS, DFS, BestFirst)
-- **Configurable depth limits** and page constraints
-- **Advanced URL filtering** with regex pattern support
-- **Content filtering** and domain restrictions
-- **Progress reporting** and comprehensive statistics
-- **Keyword-based relevance scoring** with content analysis
+## Tools Available
 
-### Advanced Features
-- **Real file downloading** with progress tracking
-- **Browser session management** and cookie persistence
-- **Advanced proxy support** and stealth mode
-- **Content analysis** with sentiment detection and readability scoring
-- **Performance metrics** and keyword density analysis
-- **Anti-detection features** with user agent rotation
+### `crawl4ai_crawl`
+Main web crawling tool with full feature support.
 
-## 📖 Usage
+**Parameters:**
+- `url` (required): URL to crawl
+- `userDataDir` (optional): Path to Chrome user data directory for authentication
+- `headless` (optional): Run in headless mode (default: true if no profile, false with profile)
+- `verbose` (optional): Enable detailed logging (default: false)
 
-### Basic URL Crawling
-```typescript
-// Simple page crawling
-const result = await crawl({
-  url: "https://example.com",
-  format: "markdown",
-  depth: 1,
-  maxPages: 10
-});
-```
-
-### Deep Crawling with Strategies
-```typescript
-// BFS Strategy - Breadth-First Search
-const bfsResult = await deepCrawl({
-  url: "https://docs.example.com",
-  strategy: "bfs",
-  depth: 3,
-  maxPages: 50,
-  includePatterns: ["/docs", "/api"],
-  excludePatterns: ["/admin", "/private"]
-});
-
-// DFS Strategy - Depth-First Search
-const dfsResult = await deepCrawl({
-  url: "https://docs.example.com",
-  strategy: "dfs",
-  depth: 2,
-  maxPages: 25
-});
-
-// BestFirst Strategy - Keyword-based prioritization
-const bestFirstResult = await deepCrawl({
-  url: "https://docs.example.com",
-  strategy: "bestfirst",
-  keywords: ["api", "documentation", "tutorial"],
-  depth: 3,
-  maxPages: 30
-});
-```
-
-### Content Filtering
-```typescript
-// URL pattern filtering
-const filteredResult = await crawl({
-  url: "https://example.com",
-  includePatterns: ["/blog", "/news"],
-  excludePatterns: ["/admin", "/private"],
-  includeDomains: ["example.com", "trusted.com"],
-  excludeDomains: ["spam.com", "ads.com"]
-});
-```
-
-### File Downloading
-```typescript
-// Download specific file types
-const downloadResult = await downloadFiles({
-  url: "https://example.com",
-  outputDir: "./downloads",
-  fileTypes: ["pdf", "jpg", "png", "docx"],
-  maxFileSize: 50 * 1024 * 1024, // 50MB
-  maxFiles: 100,
-  recursive: true
-});
-```
-
-### Content Analysis
-```typescript
-// Comprehensive content analysis
-const analysisResult = await analyze({
-  url: "https://example.com",
-  extractImages: true,
-  extractLinks: true,
-  extractMetadata: true,
-  includePerformance: true,
-  includeSentiment: true,
-  keywordAnalysis: true,
-  format: "json"
-});
-```
-
-## ⚙️ Configuration
-
-### Environment Variables
+**Example:**
 ```bash
-# Core Configuration
-CRAWL4AI_DEFAULT_OUTPUT_DIR="./crawled-content"
-CRAWL4AI_MAX_DEPTH=3
-CRAWL4AI_MAX_PAGES=50
-CRAWL4AI_DEFAULT_FORMAT="markdown"
+# Basic crawl
+opencode run "use crawl4ai to crawl https://example.com"
 
-# Advanced Features
-CRAWL4AI_ENABLE_STEALTH=false
-CRAWL4AI_PROXY_SERVER=""
-CRAWL4AI_PROXY_USERNAME=""
-CRAWL4AI_PROXY_PASSWORD=""
+# With Chrome profile for authenticated pages
+opencode run "use crawl4ai to crawl https://twitter.com with userDataDir=/Users/you/.chrome-profile"
 
-# Testing
-CRAWL4AI_TEST_MODE="false"
+# With GUI monitoring
+opencode run "use crawl4ai to crawl https://example.com with headless=false"
+
+# With verbose logging
+opencode run "use crawl4ai to crawl https://example.com with verbose=true"
 ```
 
-### Browser Dependencies
-The tool requires Playwright browsers for web automation. Install with:
+### `crawl4ai_firstLink`
+Get the first link from a search query or web page.
+
+**Parameters:**
+- `query` (required): Search query or direct URL
+
+**Example:**
 ```bash
-npx playwright install
+opencode run "use crawl4ai to get the first link of 'funny dog'"
 ```
 
-### Proxy Configuration
-For proxy support, configure with:
+### `crawl4ai_analyzeWeb`
+Analyze web page content and extract structured data.
+
+**Parameters:**
+- `url` (required): URL to analyze
+- `userDataDir` (optional): Chrome profile path
+- `headless` (optional): Headless mode toggle
+- `verbose` (optional): Verbose logging
+
+**Example:**
 ```bash
-export CRAWL4AI_PROXY_SERVER="http://proxy.example.com:8080"
-export CRAWL4AI_PROXY_USERNAME="your-username"
-export CRAWL4AI_PROXY_PASSWORD="your-password"
+opencode run "use crawl4ai to analyze https://news.ycombinator.com"
 ```
 
-### Session Management
-Sessions are automatically managed and persist browser state:
-```typescript
-import { SessionManager } from './opencode/tool/crawl4ai/index.ts'
+## Chrome Profile Setup
 
-// Create new session
-await SessionManager.getSession('my-session')
+To use authenticated sessions (for pages requiring login):
 
-// Close specific session
-await SessionManager.closeSession('my-session')
+### Method 1: Create a Profile Directory
 
-// Get session info
-const sessions = SessionManager.getSessionInfo()
-```
-
-### Tool Parameters Reference
-
-#### crawl() Parameters
-- `url` (string, required) - URL to crawl
-- `depth` (number, optional, default: 1) - Crawl depth
-- `maxPages` (number, optional, default: 10) - Maximum pages to crawl
-- `format` (enum, optional, default: "markdown") - Output format: "markdown" | "html" | "json"
-- `outputDir` (string, optional) - Output directory for results
-- `stealth` (boolean, optional, default: false) - Enable stealth mode
-- `session` (boolean, optional, default: false) - Maintain session persistence
-- `includePatterns` (array, optional) - URL patterns to include
-- `excludePatterns` (array, optional) - URL patterns to exclude
-- `includeDomains` (array, optional) - Domains to include
-- `excludeDomains` (array, optional) - Domains to exclude
-- `downloadFiles` (boolean, optional, default: false) - Enable file downloading
-- `fileTypes` (array, optional) - File types to download
-
-#### deepCrawlTool() Parameters
-- All `crawl()` parameters plus:
-- `strategy` (enum, optional, default: "bfs") - "bfs" | "dfs" | "bestfirst"
-- `keywords` (array, optional) - Keywords for relevance scoring
-- `includeExternalLinks` (boolean, optional, default: false) - Include external links
-
-#### download() Parameters
-- `url` (string, required) - URL to download files from
-- `fileTypes` (array, optional) - File types to download
-- `outputDir` (string, optional) - Output directory
-- `maxFiles` (number, optional, default: 100) - Maximum files to download
-- `maxFileSize` (number, optional) - Maximum file size in bytes
-- `includePatterns` (array, optional) - URL patterns for file discovery
-- `excludePatterns` (array, optional) - URL patterns to exclude
-- `recursive` (boolean, optional, default: false) - Search recursively
-
-#### analyze() Parameters
-- `url` (string, required) - URL to analyze
-- `extractImages` (boolean, optional, default: true) - Extract image information
-- `extractLinks` (boolean, optional, default: true) - Extract link information
-- `extractMetadata` (boolean, optional, default: true) - Extract page metadata
-- `format` (enum, optional, default: "json") - Output format
-- `includePerformance` (boolean, optional, default: true) - Include performance metrics
-- `includeSentiment` (boolean, optional, default: true) - Include sentiment analysis
-- `keywordAnalysis` (boolean, optional, default: true) - Include keyword density analysis
-
-## 🛠️ Tool Exports
-
-### Primary Tools
-- **`crawl`** - Simple single-page crawling with content extraction
-- **`deepCrawlTool`** - Advanced multi-page crawling with strategies
-- **`download`** - File downloading with filtering capabilities
-- **`analyze`** - Content analysis and structured data extraction
-
-### Utility Classes
-- **`URLFilterManager`** - URL pattern and domain filtering
-- **`ContentScorer`** - Keyword-based content relevance scoring
-
-## 🧪 Testing
-
-### Running Tests
+1. **Find your Playwright Chromium binary:**
 ```bash
-# Run all tests
-bun test
-
-# Run specific test files
-bun test tests/unit.test.ts
-bun test tests/integration.test.ts
-bun test tests/validation.test.ts
-
-# Type checking
-bun run type-check
-
-# Build
-bun run build
+python -m playwright install --dry-run
 ```
 
-### Test Coverage
-- **Unit Tests** - Core function validation and edge cases
-- **Integration Tests** - End-to-end workflow scenarios
-- **Validation Tests** - Output structure and data quality validation
-- **Performance Tests** - Response time and memory usage validation
+2. **Launch Chromium with a custom profile:**
+```bash
+# macOS
+~/Library/Caches/ms-playwright/chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium \
+    --user-data-dir=/Users/you/my-chrome-profile
 
-### Test Mode
-Set `CRAWL4AI_TEST_MODE="true"` to enable mock responses for testing without actual network calls.
+# Linux
+~/.cache/ms-playwright/chromium-*/chrome-linux/chrome \
+    --user-data-dir=/home/you/my-chrome-profile
 
-## 🔧 Dependencies
+# Windows
+"C:\Users\you\AppData\Local\ms-playwright\chromium-*\chrome-win\chrome.exe" ^
+    --user-data-dir="C:\Users\you\my-chrome-profile"
+```
 
-### Core Dependencies
-- **`@opencode-ai/sdk`** - OpenCode integration and tool patterns
-- **`zod`** - Schema validation and type safety
+3. **Log in to your accounts** in the opened browser
 
-### Optional Dependencies
-- **`crawl4ai`** - Core crawling functionality (when implemented)
+4. **Close the browser** to save the profile
 
-### Development Dependencies
-- **`@opencode-ai/plugin`** - OpenCode plugin development tools
-- **`@types/node`** - Node.js type definitions
-- **`bun-types`** - Bun runtime types
+5. **Use the profile path** in the tool:
+```bash
+opencode run "use crawl4ai to crawl https://twitter.com/home with userDataDir=/Users/you/my-chrome-profile"
+```
 
-## 🛡️ Error Handling
+### Method 2: Use Your Existing Chrome Profile
 
-### Comprehensive Error Coverage
-- **URL Validation** - Invalid URLs and malformed requests
-- **Network Errors** - Timeouts, connection failures, rate limiting
-- **Content Access** - 403/404 errors, authentication issues
-- **File System** - Permission errors, disk space, path validation
-- **Configuration** - Invalid parameters, conflicting options
+You can point to your existing Chrome profile directory:
 
-### Error Recovery
-- **Graceful Degradation** - Partial results when possible
-- **Retry Logic** - Exponential backoff for transient failures
-- **Clear Messages** - Actionable error descriptions with suggestions
-- **Test Mode** - Mock responses for development and testing
+**macOS:**
+```
+/Users/you/Library/Application Support/Google/Chrome/Default
+```
 
-## 📊 Output Formats
+**Linux:**
+```
+/home/you/.config/google-chrome/Default
+```
 
-### JSON Output
+**Windows:**
+```
+C:\Users\you\AppData\Local\Google\Chrome\User Data\Default
+```
+
+**⚠️ Warning:** Close Chrome before using its profile with the tool to avoid conflicts.
+
+## GUI Monitoring
+
+To watch the crawling process in real-time:
+
+```bash
+# Enable GUI mode
+opencode run "use crawl4ai to crawl https://example.com with headless=false"
+
+# Combine with verbose logging
+opencode run "use crawl4ai to crawl https://example.com with headless=false and verbose=true"
+```
+
+This is useful for:
+- Debugging crawling issues
+- Watching authentication flows
+- Monitoring dynamic content loading
+- Understanding page interactions
+
+## Advanced Usage
+
+### Authenticated Crawling with GUI
+
+```bash
+opencode run "use crawl4ai to crawl https://linkedin.com/feed with userDataDir=/Users/you/.chrome-profile and headless=false and verbose=true"
+```
+
+This will:
+1. Open a visible Chrome window
+2. Load your saved authentication from the profile
+3. Show detailed logging of the crawl process
+4. Extract content from the authenticated page
+
+### Debugging Failed Crawls
+
+```bash
+# Enable all debugging features
+opencode run "use crawl4ai to crawl https://difficult-site.com with headless=false and verbose=true"
+```
+
+## Configuration
+
+The tool connects to a local Crawl4AI server:
+- **Default URL:** `http://localhost:11235`
+- **Timeout:** 30 seconds
+- **Viewport:** 1920x1080
+
+### Starting the Crawl4AI Server
+
+```bash
+docker run -p 11235:11235 unclecode/crawl4ai:latest
+```
+
+## Return Format
+
+All tools return JSON strings with the following structure:
+
 ```json
 {
   "url": "https://example.com",
+  "originalQuery": "example.com",
   "success": true,
-  "content": "Extracted content...",
-  "links": ["https://example.com/about", "https://example.com/contact"],
-  "images": ["https://example.com/images/logo.png"],
-  "metadata": {
-    "title": "Page Title",
-    "description": "Page description",
-    "wordCount": 1250,
-    "contentType": "text/html"
-  },
-  "crawlStats": {
-    "pagesCrawled": 1,
-    "totalLinks": 5,
-    "totalImages": 3,
-    "crawlTime": 250
-  }
+  "title": "Example Domain",
+  "description": "Example description",
+  "content": "Markdown content...",
+  "firstLink": "https://first-link.com",
+  "totalLinks": 10,
+  "links": ["link1", "link2", "..."]
 }
 ```
 
-### Markdown Output
-```markdown
-# Content Analysis Report
+## Error Handling
 
-## URL
-https://example.com
+The tool handles various error scenarios:
 
-## Summary
-Extracted content summary with key insights...
+- **CAPTCHA Detection**: Detects and reports when Google blocks automated searches
+- **Server Offline**: Clear error message with instructions to start the server
+- **Failed Crawls**: Returns detailed error information
+- **Network Issues**: Timeout and connection error handling
 
-## Links Found
-- [About Us](https://example.com/about)
-- [Contact](https://example.com/contact)
+## Best Practices
 
-## Images Found
-- ![Logo](https://example.com/images/logo.png)
-```
+1. **Use Direct URLs**: Search queries may be blocked by CAPTCHA
+2. **Profile Management**: Keep separate profiles for different use cases
+3. **Headless for Production**: Use `headless=true` for automated workflows
+4. **GUI for Debugging**: Use `headless=false` when troubleshooting
+5. **Verbose Logging**: Enable when you need detailed progress information
+6. **Close Chrome**: Always close Chrome before using its profile directory
 
-## 🚀 Performance Considerations
+## Troubleshooting
 
-### Optimization Features
-- **Concurrent Crawling** - Parallel page processing where appropriate
-- **Memory Management** - Efficient streaming for large crawls
-- **Intelligent Caching** - Resource reuse and duplicate avoidance
-- **Resource Cleanup** - Automatic memory and file handle management
-
-### Scalability Limits
-- **Configurable Concurrency** - Adjustable parallel processing limits
-- **Memory Monitoring** - Usage tracking and threshold alerts
-- **Progress Reporting** - Real-time status for long operations
-- **Cancellation Support** - Graceful interruption of running crawls
-
-## 🔒 Security & Privacy
-
-### Data Protection
-- **No Sensitive Data Storage** - Temporary content only
-- **Configurable Retention** - User-controlled data lifecycle
-- **Secure Proxy Handling** - Encrypted authentication support
-- **SSL Validation** - Certificate verification and analysis
-
-### Ethical Crawling
-- **Robots.txt Compliance** - Automatic rule checking and caching
-- **Rate Limiting** - Configurable delays between requests
-- **User-Agent Identification** - Clear bot identification
-- **Respectful Access** - Server resource consideration
-
-## 📈 Advanced Usage Examples
-
-### Research Workflow
-```typescript
-// Academic research with content analysis
-const researchResults = await analyze({
-  url: "https://research-site.example.com/paper",
-  extractMetadata: true,
-  includePerformance: true,
-  includeSentiment: true,
-  keywordAnalysis: true,
-  format: "json"
-});
-
-// Follow-up deep crawl of related content
-const relatedContent = await deepCrawl({
-  url: "https://research-site.example.com",
-  strategy: "bestfirst",
-  keywords: researchResults.content.topics,
-  depth: 2,
-  maxPages: 20,
-  includePatterns: ["/papers", "/citations"]
-});
-```
-
-### Content Migration
-```typescript
-// Download all documentation files
-const migrationResult = await download({
-  url: "https://old-site.example.com/docs",
-  fileTypes: ["pdf", "doc", "md"],
-  outputDir: "./migrated-content",
-  maxFiles: 500,
-  maxFileSize: 100 * 1024 * 1024, // 100MB
-  recursive: true,
-  includePatterns: ["/documentation", "/guides", "/manuals"]
-});
-```
-
-## 🤝 Contributing
-
-### Development Setup
-1. Clone the repository
-2. Install dependencies: `bun install`
-3. Run tests: `bun test`
-4. Make changes with test coverage
-5. Submit pull request with documentation
-
-### Adding New Features
-- Follow OpenCode tool patterns
-- Add comprehensive tests
-- Update documentation
-- Consider performance impact
-- Ensure error handling
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### Browser/Installation Issues
+### "Server not running" error
+Start the Crawl4AI server:
 ```bash
-# Playwright browsers not found
-npx playwright install
-
-# Permission denied
-sudo npx playwright install
-
-# Browser fails to start
-export CRAWL4AI_TEST_MODE="true"  # Use test mode
+docker run -p 11235:11235 unclecode/crawl4ai:latest
 ```
 
-#### Network/Proxy Issues
+### "Blocked by CAPTCHA" error
+Use a direct URL instead of a search query, or use your Chrome profile with saved authentication.
+
+### Profile conflicts
+Make sure Chrome is closed before using its profile directory with the tool.
+
+### Slow crawling
+Enable verbose logging to see what's taking time:
 ```bash
-# Connection timeouts
-export CRAWL4AI_MAX_DEPTH=1  # Reduce crawl depth
-export CRAWL4AI_MAX_PAGES=10  # Reduce page count
-
-# Proxy authentication
-export CRAWL4AI_PROXY_SERVER="http://proxy:port"
-export CRAWL4AI_PROXY_USERNAME="user"
-export CRAWL4AI_PROXY_PASSWORD="pass"
+opencode run "use crawl4ai to crawl https://slow-site.com with verbose=true"
 ```
 
-#### Memory/Performance Issues
+## Documentation
+
+For more information about Crawl4AI capabilities:
+- [Crawl4AI Documentation](https://docs.crawl4ai.com/)
+- [Identity-Based Crawling](https://docs.crawl4ai.com/advanced/identity-based-crawling/)
+- [Browser Configuration](https://docs.crawl4ai.com/api/parameters/)
+
+## Examples
+
+### Example 1: Basic News Crawl
 ```bash
-# High memory usage
-export CRAWL4AI_MAX_PAGES=20  # Reduce concurrent pages
-
-# Slow crawling
-export CRAWL4AI_ENABLE_STEALTH="true"  # Enable anti-detection
+opencode run "use crawl4ai to crawl https://news.ycombinator.com"
 ```
 
-#### Content Access Issues
+### Example 2: Authenticated Twitter Crawl
 ```bash
-# Robots.txt blocking
-# Tool automatically respects robots.txt
-# Check manually: curl https://example.com/robots.txt
-
-# Rate limiting
-export CRAWL4AI_MAX_DEPTH=1
-export CRAWL4AI_MAX_PAGES=5
+opencode run "use crawl4ai to crawl https://twitter.com/home with userDataDir=/Users/you/.twitter-profile"
 ```
 
-### Debug Mode
-Enable detailed logging:
+### Example 3: Debug a Complex Site
 ```bash
-export CRAWL4AI_TEST_MODE="true"
-export DEBUG=crawl4ai
+opencode run "use crawl4ai to crawl https://complex-spa.com with headless=false and verbose=true"
 ```
 
-### Performance Tuning
+### Example 4: Extract First Link
 ```bash
-# For large sites
-export CRAWL4AI_MAX_DEPTH=2
-export CRAWL4AI_MAX_PAGES=100
-
-# For fast crawling
-export CRAWL4AI_MAX_DEPTH=1
-export CRAWL4AI_MAX_PAGES=20
-
-# Enable stealth for difficult sites
-export CRAWL4AI_ENABLE_STEALTH="true"
+opencode run "use crawl4ai to get the first link of 'best pizza near me'"
 ```
 
-## 📝 License
-
-This tool follows the OpenCode project license and contribution guidelines.
-
-## 🔗 Related Tools
-
-- **Gemini Tool** - Image generation and analysis
-- **URL Validator** - URL validation and analysis
-- **Template Tool** - Tool development patterns
-
-For more information, see the [OpenCode Documentation](https://docs.opencode.ai).
+### Example 5: Analyze Page Content
+```bash
+opencode run "use crawl4ai to analyze https://blog.example.com/article with verbose=true"
+```
