@@ -32,3 +32,9 @@ export {
   checkAccessibility, // Check if URL is accessible
   default as urlValidator  // Default export (validate tool)
 } from "./url-validator"
+
+// Google Search tool
+export {
+  search,             // Perform real-time internet research using Google Search
+  default as googleSearch  // Default export (search tool)
+} from "./google-search"
