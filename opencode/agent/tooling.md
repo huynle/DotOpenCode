@@ -63,13 +63,16 @@ You have access to specialized subagents for validation and documentation:
   - Error handling testing
   - Multi-export tool validation
   - **Use during**: Step 4b (CLI Testing)
+  - **Test Output Location**: `@opencode/tests/tools/<toolname>/`
 
 - **@subagents/tooling/documenter**: Comprehensive documentation generation
-  - README.md with setup and usage examples
-  - Validation report formatting
+  - README.md with setup and usage examples at `@opencode/docs/tools/<toolname>/`
+  - VALIDATION.md report at `@opencode/docs/tools/<toolname>/`
+  - Examples at `@opencode/docs/tools/<toolname>/examples/`
   - Quick reference creation
   - Integration guide generation
   - **Use during**: Step 5 (Documentation)
+  - **Output Location**: `@opencode/docs/tools/<toolname>/`
 
 **Workflow**: Use all three subagents for complete validation and documentation pipeline.
 
@@ -1084,30 +1087,63 @@ OpenCode reads ALL TypeScript files in `@opencode/tool/` during startup. Test fi
 #### Correct Structure
 
 ```
-@opencode/tool/
-├── index.ts              # ✅ Main exports
-├── my-tool/
-│   └── index.ts          # ✅ Production code only
-└── another-tool/
-    └── index.ts          # ✅ Production code only
-
-@opencode/tool/tests/     # ✅ Tests in separate directory
-├── my-tool.test.ts
-└── another-tool.test.ts
-
-# OR outside @opencode/ entirely
-tests/opencode/tool/
-├── my-tool.test.ts
-└── another-tool.test.ts
+@opencode/
+├── tool/                          # ✅ Production code only
+│   ├── index.ts                   # Main exports
+│   ├── my-tool/
+│   │   └── index.ts               # Production code only
+│   └── another-tool/
+│       └── index.ts               # Production code only
+│
+├── tests/tools/                   # ✅ All tool tests (RECOMMENDED)
+│   ├── my-tool/
+│   │   ├── unit.test.ts
+│   │   ├── integration.test.ts
+│   │   └── validation.test.ts
+│   └── another-tool/
+│       ├── unit.test.ts
+│       └── integration.test.ts
+│
+└── docs/tools/                    # ✅ All tool documentation (RECOMMENDED)
+    ├── my-tool/
+    │   ├── README.md
+    │   ├── VALIDATION.md
+    │   └── examples/
+    │       └── usage.md
+    └── another-tool/
+        ├── README.md
+        └── VALIDATION.md
 ```
+
+#### Organized Documentation and Testing Structure
+
+**MANDATORY**: All tests and documentation MUST be stored in dedicated directories:
+
+**Tests Location**: `@opencode/tests/tools/<toolname>/`
+- Unit tests: `unit.test.ts`
+- Integration tests: `integration.test.ts`
+- Validation tests: `validation.test.ts`
+
+**Documentation Location**: `@opencode/docs/tools/<toolname>/`
+- Main documentation: `README.md`
+- Validation report: `VALIDATION.md`
+- Examples: `examples/` subdirectory
+
+**Benefits**:
+- ✅ Clean separation of concerns
+- ✅ Easy to find all tests for a tool
+- ✅ Easy to find all documentation for a tool
+- ✅ Consistent structure across all tools
+- ✅ No pollution of production code directories
 
 #### Validation
 
 The tooling agent will:
 1. Scan tool directories for test files
-2. Issue warnings if test files detected
-3. Recommend moving tests to appropriate location
-4. Document violations in validation report
+2. Issue warnings if test files detected in `@opencode/tool/`
+3. Recommend moving tests to `@opencode/tests/tools/<toolname>/`
+4. Recommend moving docs to `@opencode/docs/tools/<toolname>/`
+5. Document violations in validation report
 
 See `@opencode/tool/README.md` for complete file structure documentation.
 
@@ -1583,21 +1619,23 @@ opencode run "/<command-with-args> test input" --agent build --config "$CONFIG_D
 ### Phase 4: Documentation
 
 #### Tool Documentation
-- Create `<TOOLNAME>_VALIDATION.md`
+- Create `@opencode/docs/tools/<toolname>/README.md`
+- Create `@opencode/docs/tools/<toolname>/VALIDATION.md`
+- Create `@opencode/docs/tools/<toolname>/examples/` directory
 - Document test cases and outcomes
 - Include working example commands
 - Note limitations and requirements
 - Provide troubleshooting guide
 
 #### Agent Documentation
-- Create `<AGENTNAME>_README.md`
+- Create `@opencode/docs/agents/<agentname>/README.md`
 - Document agent purpose and capabilities
 - Include usage examples and prompts
 - Note permission restrictions
 - Provide integration guide
 
 #### Command Documentation
-- Create `<COMMANDNAME>_README.md`
+- Create `@opencode/docs/commands/<commandname>/README.md`
 - Document command syntax and parameters
 - Include template examples
 - Note required files and dependencies
@@ -1732,42 +1770,58 @@ References:
 
 ## Current Tool Structure (Production-Only)
 
-**CRITICAL**: Only production code belongs in `@opencode/tool/`. All tests go elsewhere.
+**CRITICAL**: Only production code belongs in `@opencode/tool/`. All tests and documentation go in dedicated directories.
 
-### Correct Structure with Tests Separated
+### Correct Structure with Tests and Documentation Separated
 
 ```
 @opencode/
-├── tool/                 # ✅ PRODUCTION CODE ONLY
-│   ├── index.ts          # Main entry point - re-exports all tools
-│   ├── package.json      # Dependencies for all tools
-│   ├── tsconfig.json     # TypeScript configuration
-│   ├── README.md         # Documentation and file structure constraints
+├── tool/                          # ✅ PRODUCTION CODE ONLY
+│   ├── index.ts                   # Main entry point - re-exports all tools
+│   ├── package.json               # Dependencies for all tools
+│   ├── tsconfig.json              # TypeScript configuration
+│   ├── README.md                  # Documentation and file structure constraints
 │   │
-│   ├── gemini/           # Tool subdirectory
-│   │   └── index.ts      # ✅ Tool implementation (production only)
+│   ├── gemini/                    # Tool subdirectory
+│   │   └── index.ts               # ✅ Tool implementation (production only)
 │   │
-│   ├── env/              # Tool subdirectory
-│   │   └── index.ts      # ✅ Tool implementation (production only)
+│   ├── env/                       # Tool subdirectory
+│   │   └── index.ts               # ✅ Tool implementation (production only)
 │   │
-│   └── url-validator/    # Tool subdirectory
-│       └── index.ts      # ✅ Tool implementation (production only)
+│   └── url-validator/             # Tool subdirectory
+│       └── index.ts               # ✅ Tool implementation (production only)
 │
-├── tests/tools/          # ✅ Tests in separate directory
-│   ├── gemini.test.ts
-│   ├── env.test.ts
-│   └── url-validator.test.ts
+├── tests/tools/                   # ✅ ALL TOOL TESTS (RECOMMENDED)
+│   ├── gemini/
+│   │   ├── unit.test.ts
+│   │   ├── integration.test.ts
+│   │   └── validation.test.ts
+│   ├── env/
+│   │   └── unit.test.ts
+│   └── url-validator/
+│       ├── unit.test.ts
+│       ├── integration.test.ts
+│       └── validation.test.ts
 │
-└── agent/                # Agents directory
+├── docs/tools/                    # ✅ ALL TOOL DOCUMENTATION (RECOMMENDED)
+│   ├── gemini/
+│   │   ├── README.md
+│   │   ├── VALIDATION.md
+│   │   └── examples/
+│   │       ├── generate.md
+│   │       ├── edit.md
+│   │       └── analyze.md
+│   ├── env/
+│   │   ├── README.md
+│   │   └── VALIDATION.md
+│   └── url-validator/
+│       ├── README.md
+│       ├── VALIDATION.md
+│       └── examples/
+│           └── usage.md
+│
+└── agent/                         # Agents directory
     └── tooling.md
-
-# Alternative: Tests completely outside @opencode/
-tests/
-└── opencode/
-    └── tool/
-        ├── gemini.test.ts
-        ├── env.test.ts
-        └── url-validator.test.ts
 ```
 
 ### WRONG Structure (DO NOT DO THIS)
@@ -1778,11 +1832,13 @@ tests/
 ├── gemini/
 │   ├── index.ts          # ✅ Production code
 │   ├── index.test.ts     # ❌ WRONG: Test in production directory
+│   ├── README.md         # ❌ WRONG: Documentation in production directory
 │   └── __tests__/        # ❌ WRONG: Test directory in production
 │       └── gemini.test.ts
 └── env/
     ├── index.ts          # ✅ Production code
-    └── env.mock.ts       # ❌ WRONG: Mock in production directory
+    ├── env.mock.ts       # ❌ WRONG: Mock in production directory
+    └── VALIDATION.md     # ❌ WRONG: Documentation in production directory
 ```
 
 ### Why Separation Matters
@@ -1793,12 +1849,13 @@ tests/
 3. Parses and registers each tool
 4. **Problem**: Test files get loaded as if they were tools!
 
-**Impact of Test Files in Production:**
+**Impact of Test/Documentation Files in Production:**
 - ❌ Slower startup (parsing unnecessary files)
 - ❌ Import errors (test frameworks not available)
 - ❌ Namespace pollution (test exports conflict)
 - ❌ Memory waste (test code loaded unnecessarily)
 - ❌ Potential runtime errors
+- ❌ Cluttered production directories
 
 **Benefits of Proper Separation:**
 - ✅ Fast OpenCode startup
@@ -1806,6 +1863,9 @@ tests/
 - ✅ No test framework dependencies in production
 - ✅ Clear separation of concerns
 - ✅ Easy to maintain and debug
+- ✅ Easy to find all tests for a tool in one place
+- ✅ Easy to find all documentation for a tool in one place
+- ✅ Consistent structure across all tools
 
 **Main index.ts structure:**
 ```typescript
@@ -2013,6 +2073,7 @@ The system SHALL provide functionality.
 #### Step 5c: CLI Testing
 - [ ] Detect OpenCode config directory using environment detection function
 - [ ] Invoke @subagents/tooling/validator for automated testing with config directory
+- [ ] **Test files created at**: `@opencode/tests/tools/<toolname>/`
 - [ ] Review validation report for test results
 - [ ] **NEW**: Verify tool is accessible through exports
 - [ ] Fix any failures
@@ -2028,17 +2089,22 @@ The system SHALL provide functionality.
 - [ ] Verify tool appears in agent's tool list
 - [ ] Check return types (must be strings)
 - [ ] Test all exported tools (if multiple)
-- [ ] Document validation results
+- [ ] Create test files at `@opencode/tests/tools/<toolname>/`
+- [ ] Document validation results at `@opencode/docs/tools/<toolname>/VALIDATION.md`
 
 ### Step 6: Documentation
 - [ ] Invoke @subagents/tooling/documenter to generate documentation
-- [ ] Review generated README.md
-- [ ] Review validation report
+- [ ] Documentation created at `@opencode/docs/tools/<toolname>/README.md`
+- [ ] Validation report at `@opencode/docs/tools/<toolname>/VALIDATION.md`
+- [ ] Examples at `@opencode/docs/tools/<toolname>/examples/`
+- [ ] Review generated documentation
 - [ ] Add any tool-specific notes
 
 **Manual checklist (if not using subagent):**
+- [ ] Create `@opencode/docs/tools/<toolname>/` directory
 - [ ] Create README.md with usage examples
-- [ ] Create validation test plan
+- [ ] Create VALIDATION.md with test results
+- [ ] Create examples/ subdirectory with usage examples
 - [ ] Document known limitations
 - [ ] Provide troubleshooting guide
 - [ ] Include example CLI commands

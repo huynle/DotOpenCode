@@ -41,3 +41,15 @@ export {
   crawlUrl,           // Core crawling function
   default as crawl4ai // Default export (crawl tool)
 } from "./crawl4ai"
+
+// Google Search tool
+export {
+  search,             // Perform real-time internet research using Google Search
+  default as googleSearch  // Default export (search tool)
+} from "./google-search"
+
+// Universal Crawler tool (smart_crawl)
+export {
+  smart_crawl,        // Advanced web crawler with deep crawl, auth, and structured extraction
+  default as smartCrawl  // Default export (smart_crawl tool)
+} from "./crawl"
