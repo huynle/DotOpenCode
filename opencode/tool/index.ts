@@ -38,3 +38,14 @@ export {
   search,             // Perform real-time internet research using Google Search
   default as googleSearch  // Default export (search tool)
 } from "./google-search"
+
+// Browser-Use automation tools
+export {
+  execute,            // Execute browser automation tasks
+  extractData,        // Extract data from webpages
+  fillForm,           // Fill out web forms
+  screenshot,         // Take screenshots
+  navigate,           // Navigate and extract content
+  search as browserSearch,  // Perform web searches
+  default as browserUse  // Default export (execute tool)
+} from "./browser-use"
