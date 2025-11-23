@@ -551,10 +551,10 @@ permission:
 ##### Testing Agent Functionality
 ```bash
 # Test agent discovery
-opencode run "What agents are available?" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What agents are available?" --agent build
 
 # Test subagent invocation
-opencode run "@security-reviewer please review this file" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "@security-reviewer please review this file" --agent build
 
 # Test primary agent switching
 # Use Tab key in TUI to cycle through agents
@@ -1205,35 +1205,35 @@ See `@opencode/tool/README.md` for complete file structure documentation.
 #### Tool Testing
 ```bash
 # Basic functionality
-opencode run "Use <toolname> to <action>" --agent <agent-name>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <toolname> to <action>" --agent <agent-name>
 
 # Parameter testing
-opencode run "Use <toolname> with <param> to <action>" --agent <agent-name>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <toolname> with <param> to <action>" --agent <agent-name>
 
 # Error handling
-opencode run "Use <toolname> with invalid input" --agent <agent-name>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <toolname> with invalid input" --agent <agent-name>
 
 # Tool discovery
-opencode run "What tools do you have access to?" --agent <agent-name>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What tools do you have access to?" --agent <agent-name>
 ```
 
 #### Agent Testing
 ```bash
 # Agent discovery
-opencode run "What agents are available?" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What agents are available?" --agent build
 
 # Primary agent switching
 # Test Tab key functionality in TUI
 # Verify agent appears in rotation
 
 # Subagent invocation
-opencode run "@<agent-name> help me with <task>" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "@<agent-name> help me with <task>" --agent build
 
 # Agent capabilities
-opencode run "What can you do?" --agent <agent-name>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What can you do?" --agent <agent-name>
 
 # Permission testing
-opencode run "Try to edit a file" --agent <restricted-agent>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Try to edit a file" --agent <restricted-agent>
 ```
 
 #### Command Testing
@@ -1243,13 +1243,13 @@ opencode run "Try to edit a file" --agent <restricted-agent>
 # Verify command appears in list
 
 # Basic execution
-opencode run "/<command-name>" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "/<command-name>" --agent build
 
 # With arguments
-opencode run "/<command-name> <arg1> <arg2>" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "/<command-name> <arg1> <arg2>" --agent build
 
 # Template placeholders
-opencode run "/<command-with-args> test input" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "/<command-with-args> test input" --agent build
 
 # File references
 # Test commands with @filename syntax
@@ -1338,13 +1338,13 @@ opencode run "/<command-with-args> test input" --agent build
 #### Final Validation
 ```bash
 # Comprehensive test suite
-opencode run "Test all components in production scenario" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Test all components in production scenario" --agent build
 
 # Performance validation
-opencode run "Measure performance of all components" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Measure performance of all components" --agent build
 
 # Security validation
-opencode run "Test security restrictions and permissions" --agent build
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Test security restrictions and permissions" --agent build
 ```
 
 #### Production Checklist
@@ -1389,25 +1389,25 @@ opencode run "Test security restrictions and permissions" --agent build
 ## Test Cases
 
 ### TC1: Basic Functionality
-**Command:** `opencode run "Use <tool> to <action>" --agent <agent>`
+**Command:** `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <tool> to <action>" --agent <agent>`
 **Expected:** [describe expected output]
 **Result:** [ ] Pass [ ] Fail
 **Notes:** 
 
 ### TC2: Parameter Variations
-**Command:** `opencode run "Use <tool> with <params>" --agent <agent>`
+**Command:** `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <tool> with <params>" --agent <agent>`
 **Expected:** [describe expected output]
 **Result:** [ ] Pass [ ] Fail
 **Notes:**
 
 ### TC3: Error Handling
-**Command:** `opencode run "Use <tool> with invalid input" --agent <agent>`
+**Command:** `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <tool> with invalid input" --agent <agent>`
 **Expected:** Graceful error message
 **Result:** [ ] Pass [ ] Fail
 **Notes:**
 
 ### TC4: Tool Discovery
-**Command:** `opencode run "What tools do you have?" --agent <agent>`
+**Command:** `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What tools do you have?" --agent <agent>`
 **Expected:** Tool appears in list
 **Result:** [ ] Pass [ ] Fail
 **Notes:**
@@ -1722,7 +1722,7 @@ export {
 - [ ] Confirm export statements follow proper conventions
 - [ ] Check that export names match tool implementation
 - [ ] Verify no double-prefixing in export names
-- [ ] Test tool discovery: `OPENCODE_CONFIG_DIR="..." opencode run "What tools do you have?" --agent general`
+- [ ] Test tool discovery: `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What tools do you have?" --agent general`
 
 #### Step 5b: Static Analysis
 - [ ] Invoke @subagents/tooling/analyzer to check code structure
@@ -1743,7 +1743,7 @@ export {
 **Manual checklist (if not using subagents):**
 - [ ] Verify tool exports in main index.ts (MANDATORY)
 - [ ] Run static checks (file location, imports, exports)
-- [ ] Test with `opencode run` CLI (basic functionality)
+- [ ] Test with `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run` CLI (basic functionality)
 - [ ] Test with various parameters
 - [ ] Test error handling
 - [ ] Verify tool appears in agent's tool list
@@ -1771,7 +1771,7 @@ export {
 
 ### Step 7: Integration
 - [ ] Configure agent to use tool (if needed)
-- [ ] Test with `opencode run "<prompt>"` cli tool
+- [ ] Test with `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "<prompt>"` cli tool
 - [ ] Verify in real-world scenarios
 - [ ] Update agent documentation
 - [ ] Confirm tool exports are working in production
@@ -1809,7 +1809,7 @@ export {
 
 4. **Validation**: Used `opencode run` CLI to test before declaring complete.
    ```bash
-   opencode run "Use crawl4ai to fetch https://example.com" --agent web-researcher
+   OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use crawl4ai to fetch https://example.com" --agent web-researcher
    ```
 
 5. **Error Messages**: Provided helpful error messages as strings.
@@ -1823,19 +1823,19 @@ export {
 
 ```bash
 # Basic tool test
-opencode run "Use <tool> to <action>" --agent <agent>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <tool> to <action>" --agent <agent>
 
 # Test with parameters
-opencode run "Use <tool> with param=value" --agent <agent>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <tool> with param=value" --agent <agent>
 
 # List available tools
-opencode run "What tools do you have access to?" --agent <agent>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "What tools do you have access to?" --agent <agent>
 
 # Test error handling
-opencode run "Use <tool> with invalid input" --agent <agent>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <tool> with invalid input" --agent <agent>
 
 # Test specific tool variant (multiple exports)
-opencode run "Use <toolname_variant> to <action>" --agent <agent>
+OPENCODE_CONFIG_DIR=$PWD/opencode opencode run "Use <toolname_variant> to <action>" --agent <agent>
 ```
 
 ## Quick Validation Checklist
@@ -1850,7 +1850,7 @@ Before declaring a tool complete, verify:
 - ✅ Dependencies in parent `package.json` and installed
 - ✅ All execute() functions return strings
 - ✅ Export names follow conventions (no double-prefixing)
-- ✅ Tested with `opencode run` CLI using OPENCODE_CONFIG_DIR
+- ✅ Tested with `OPENCODE_CONFIG_DIR=$PWD/opencode opencode run` CLI
 - ✅ Tool appears in agent's available tools (verified with real CLI)
 - ✅ No "expected string, received object" errors
 - ✅ Error handling returns string messages
